@@ -24,3 +24,10 @@ def mobile_exists(mobile: str) -> bool:
         if user["mobile"] == mobile:
             return True
     return False
+
+def find_user_info(decoded_token: dict) -> str:
+    data = ds.get_data()
+    for user in data["users"]:
+        if decoded_token.user_id == user.id:
+            return user
+    return None

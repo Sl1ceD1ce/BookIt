@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
 import dataStore as ds
 import auth
 from schemas import UserRegister, UserResponse
 
 app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 @app.on_event("startup")
 async def startup_event():
@@ -26,3 +29,11 @@ async def register_user_route(user_data: UserRegister):
         return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+@app.get("/users")
+async def get_user_route(token: str = Depends(oauth2_scheme)):
+    try: 
+        return auth.get_users(token)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
