@@ -1,0 +1,38 @@
+from pydantic import BaseModel, EmailStr, Field, validator
+import re
+
+class UserRegister(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=30)
+    last_name: str = Field(..., min_length=1, max_length=30)
+    email: EmailStr = Field(..., max_length=50)
+    password: str = Field(..., min_length=1, max_length=30)
+    mobile: str
+    tutor: bool
+
+    @validator('first_name', 'last_name')
+    def validate_name(cls, v):
+        if not v.strip():
+            raise ValueError('name cannot be empty or just whitespace')
+        return v.strip()
+
+    @validator('password')
+    def validate_password(cls, v):
+        if not re.match(r'^[A-Za-z0-9_]+$', v):
+            raise ValueError('password can only contain letters, numbers, and underscores')
+        return v
+    
+    @validator('mobile')
+    def validate_mobile(cls, v):
+        mobile_str = str(v).replace(' ', '').replace('-', '')
+        if not re.match(r'^04\d{8}$', mobile_str):
+            raise ValueError('invalid mobile number format')
+        return mobile_str
+
+class UserResponse(BaseModel):
+    id: str
+    first_name: str
+    last_name: str
+    email: str
+    mobile: str
+    token: str
+    message: str
