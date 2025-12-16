@@ -28,6 +28,6 @@ def mobile_exists(mobile: str) -> bool:
 def find_user_info(decoded_token: dict) -> str:
     data = ds.get_data()
     for user in data["users"]:
-        if decoded_token.user_id == user.id:
+        if decoded_token["user_id"] == user["id"]:
             return user
     return None

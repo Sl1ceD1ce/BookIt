@@ -86,9 +86,9 @@ def get_users(token: str) -> dict:
         raise ValueError("user does not exist")
     
     return {
-        "email": user_data.email,
-        "mobile": user_data.mobile,
-        "first_name": user_data.first_name,
-        "last_name": user_data.last_name,
-        "tutor": user_data.role == "tutor"
+        "email": user_data["email"],
+        "mobile": user_data["mobile"],
+        "first_name": user_data["first_name"],
+        "last_name": user_data["last_name"],
+        "tutor": user_data["role"] == "tutor"
     }

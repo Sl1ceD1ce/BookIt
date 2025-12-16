@@ -37,7 +37,7 @@ def client():
     return app
 
 class TestUserInfo:
-    def test_get_users_success_student(self):
+    def test_get_users_success_student(self, reset_data):
         user_data = UserRegister(
             first_name="John",
             last_name="Doe",
@@ -56,7 +56,7 @@ class TestUserInfo:
         assert res["last_name"] == "Doe"
         assert res["tutor"] == False
     
-    def test_get_users_success_tutor(self):
+    def test_get_users_success_tutor(self, reset_data):
         user_data = UserRegister(
             first_name="John",
             last_name="Doe",
@@ -75,11 +75,11 @@ class TestUserInfo:
         assert res["last_name"] == "Doe"
         assert res["tutor"] == True
     
-    def test_get_users_no_token(self):
+    def test_get_users_no_token(self, reset_data):
         with pytest.raises(ValueError):
             auth.get_users("")
 
-    def test_get_users_invalid_token(self):
+    def test_get_users_invalid_token(self, reset_data):
         with pytest.raises(ValueError):
             auth.get_users("invalid-token")
         
