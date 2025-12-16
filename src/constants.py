@@ -1,3 +1,5 @@
+# TODO: Use environment variables or more secure method in production
+
 # Status codes
 OK = 200
 BAD_REQUEST = 400

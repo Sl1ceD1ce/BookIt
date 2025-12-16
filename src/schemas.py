@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
 class UserRegister(BaseModel):
@@ -9,19 +9,22 @@ class UserRegister(BaseModel):
     mobile: str
     tutor: bool
 
-    @validator('first_name', 'last_name')
+    @field_validator('first_name', 'last_name')
+    @classmethod
     def validate_name(cls, v):
         if not v.strip():
             raise ValueError('name cannot be empty or just whitespace')
         return v.strip()
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         if not re.match(r'^[A-Za-z0-9_]+$', v):
             raise ValueError('password can only contain letters, numbers, and underscores')
         return v
     
-    @validator('mobile')
+    @field_validator('mobile')
+    @classmethod
     def validate_mobile(cls, v):
         mobile_str = str(v).replace(' ', '').replace('-', '')
         if not re.match(r'^04\d{8}$', mobile_str):

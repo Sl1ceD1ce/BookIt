@@ -3,14 +3,16 @@ from fastapi.security import OAuth2PasswordBearer
 import dataStore as ds
 import auth
 from schemas import UserRegister, UserResponse
+from contextlib import asynccontextmanager
 
 app = FastAPI()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-@app.on_event("startup")
+@asynccontextmanager
 async def startup_event():
     ds.load_data()
+    yield # makes all code before it execute at startup and everything after at shutdown
 
 @app.get("/")
 async def root():
