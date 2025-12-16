@@ -76,3 +76,19 @@ def register_user(user_data) -> dict:
         "token": token,
         "message": "User registered successfully",
     }
+
+def get_users(token: str) -> dict:
+
+    decoded_token = decode_jwt_token(token)
+    user_data = helpers.find_user_info(decoded_token)
+
+    if not user_data:
+        raise ValueError("user does not exist")
+    
+    return {
+        "email": user_data["email"],
+        "mobile": user_data["mobile"],
+        "first_name": user_data["first_name"],
+        "last_name": user_data["last_name"],
+        "tutor": user_data["role"] == "tutor"
+    }
