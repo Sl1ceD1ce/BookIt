@@ -24,7 +24,10 @@ import os
 from server import app
 from schemas import UserRegister
 import auth
-
+from pydantic import ValidationError
+import jwt
+from datetime import datetime, timedelta, timezone
+from auth import JWT_SECRET, JWT_ALGORITHM
 
 # Use test database
 TEST_DB = "test_data.json"
@@ -251,6 +254,101 @@ class TestUserRegistration:
 
         assert result1["id"] == "1"
         assert result2["id"] == "2"
+    
+    def test_password_too_long(self, reset_data):
+        """Test validation rejects password exceeding length requirement"""
+        with pytest.raises(ValidationError):
+            UserRegister(
+                first_name="John",
+                last_name="Doe",
+                email="john@example.com",
+                password="A" * 31,
+                mobile="0412345678",
+                tutor=False,
+            )
+    
+    def test_password_too_short(self, reset_data):
+        """Test validation rejects password below length requirement"""
+        with pytest.raises(ValidationError):
+            UserRegister(
+                first_name="John",
+                last_name="Doe",
+                email="john@example.com",
+                password="",
+                mobile="0412345678",
+                tutor=False,
+            )
+
+    def test_email_max_length(self, reset_data):
+        """Test email at max allowed length (50 chars) is accepted"""
+        local_part = "a" * 38  # "a" * 38 + "@e.com" = 50
+        email = f"{local_part}@e.com"
+        user = UserRegister(
+            first_name="Max",
+            last_name="Email",
+            email=email,
+            password="Password123_",
+            mobile="0412345678",
+            tutor=False
+        )
+        assert user.email == email
+
+    def test_email_exceeds_max_length(self, reset_data):
+        """Test email exceeding 50 chars is rejected"""
+        local_part = "a" * 50  # 39 + "@e.com" = 51
+        email = f"{local_part}@gmail.com"
+        with pytest.raises(ValidationError):
+            UserRegister(
+                first_name="Too",
+                last_name="LongEmail",
+                email=email,
+                password="Password123_",
+                mobile="0412345678",
+                tutor=False
+            )
+
+    @pytest.mark.parametrize("mobile_input", [
+        "041234567",    # too short
+        "04123456789",  # too long
+        "04A2345678",   # contains letter
+    ])
+    def test_invalid_mobile_edge_cases(self, reset_data, mobile_input):
+        with pytest.raises(ValueError, match="invalid mobile number format"):
+            UserRegister(
+                first_name="Dave",
+                last_name="Edge",
+                email="dave@example.com",
+                password="Password123_",
+                mobile=mobile_input,
+                tutor=False
+            )
+
+    @pytest.mark.parametrize("mobile_input, expected", [
+        ("0412 345 678", "0412345678"),
+        ("0412-345-678", "0412345678"),
+    ])
+    def test_mobile_with_spaces_or_dashes(self, reset_data, mobile_input, expected):
+        user = UserRegister(
+            first_name="Charlie",
+            last_name="Dash",
+            email="charlie@example.com",
+            password="Password123_",
+            mobile=mobile_input,
+            tutor=False
+        )
+        assert user.mobile == expected
+
+    def test_name_with_spaces_stripped(self, reset_data):
+        user = UserRegister(
+            first_name="  Alice  ",
+            last_name="  Smith  ",
+            email="spaces@example.com",
+            password="Password123_",
+            mobile="0466666666",
+            tutor=False
+        )
+        assert user.first_name == "Alice"
+        assert user.last_name == "Smith"
 
 
 class TestTokenHandling:
@@ -274,3 +372,30 @@ class TestTokenHandling:
 
         assert decoded["user_id"] == "123"
         assert decoded["email"] == "user@example.com"
+    
+    def test_expired_token_raises_error(self, reset_data):
+        """Test decoding an expired JWT raises error"""
+        expired_payload = {
+            "user_id": "999",
+            "email": "expired@example.com",
+            "exp": datetime.now(timezone.utc) - timedelta(hours=1)
+        }
+        token = jwt.encode(expired_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        with pytest.raises(ValueError, match="Token has expired"):
+            auth.decode_jwt_token(token)
+        
+    def test_tampered_token_raises_error(self, reset_data):
+        """Test decoding a tampered JWT raises error"""
+        user = UserRegister(
+            first_name="Tamper",
+            last_name="Test",
+            email="tamper@example.com",
+            password="Password123_",
+            mobile="0477777777",
+            tutor=False
+        )
+        result = auth.register_user(user)
+        token = result["token"]
+        tampered_token = token + "tamper"
+        with pytest.raises(ValueError, match="Invalid token"):
+            auth.decode_jwt_token(tampered_token)
