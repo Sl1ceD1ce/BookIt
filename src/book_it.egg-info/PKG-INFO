@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: book-it
+Version: 2026.0.0
+Author: Richard Zhang, Harvey Weng
+Author-email: Jason Lukman <jasonlukman729@gmail.com>
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi[standard]
+Requires-Dist: PyJWT[crypto]
+Requires-Dist: requests
+Requires-Dist: pytest
+
+# BookIt
