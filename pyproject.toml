@@ -1,0 +1,18 @@
+[project]
+name = "book-it"
+version = "2026.0.0"
+dependencies = [
+    "fastapi[standard]",
+    "PyJWT[crypto]",
+    "requests",
+    "pytest", 
+]
+requires-python = ">=3.8"
+
+authors = [
+  {name = "Jason Lukman", email = "jasonlukman729@gmail.com"},
+  {name = "Richard Zhang"},
+  {name = "Harvey Weng"}
+]
+
+readme = "README.md"
