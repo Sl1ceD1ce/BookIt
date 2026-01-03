@@ -1,11 +1,11 @@
 import sys
 import os
-import requests
 import pytest
 import dataStore as ds
 from server import app
-import auth
-from schemas import UserRegister
+from fastapi.testclient import TestClient
+
+client = TestClient(app)
 
 TEST_DB = "test_data.json"
 
@@ -18,56 +18,59 @@ def reset_data():
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)
 
-@pytest.fixture
-def client():
-    """Create test client for FastAPI"""
-    return app
-
 class TestUserInfo:
     def test_get_users_success_student(self, reset_data):
-        user_data = UserRegister(
-            first_name="John",
-            last_name="Doe",
-            email="john@example.com",
-            password="Password123_",
-            mobile="0412345678",
-            tutor=False,
-        )
-        registered_user = auth.register_user(user_data)
-
-        token = registered_user["token"]
-        res = auth.get_users(token)
-        assert res["email"] == "john@example.com"
-        assert res["mobile"] == "0412345678"
-        assert res["first_name"] == "John"
-        assert res["last_name"] == "Doe"
-        assert res["tutor"] == False
+        register = client.post(
+            "/users/register", 
+            json={
+                "first_name":"John",
+                "last_name":"Doe",
+                "email":"john@example.com",
+                "password":"Password123_",
+                "mobile":"0412345678",
+                "tutor":False
+            })
+        data = register.json()
+        token = data["token"]
+        res = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        assert res.json() == {
+            "email":"john@example.com",
+            "mobile":"0412345678",
+            "first_name":"John",
+            "last_name":"Doe",
+            "tutor":False
+        }
     
     def test_get_users_success_tutor(self, reset_data):
-        user_data = UserRegister(
-            first_name="John",
-            last_name="Doe",
-            email="john@example.com",
-            password="Password123_",
-            mobile="0412345678",
-            tutor=True,
-        )
-        registered_user = auth.register_user(user_data)
-
-        token = registered_user["token"]
-        res = auth.get_users(token)
-        assert res["email"] == "john@example.com"
-        assert res["mobile"] == "0412345678"
-        assert res["first_name"] == "John"
-        assert res["last_name"] == "Doe"
-        assert res["tutor"] == True
+        register = client.post(
+            "/users/register", 
+            json={
+                "first_name":"John",
+                "last_name":"Doe",
+                "email":"john@example.com",
+                "password":"Password123_",
+                "mobile":"0412345678",
+                "tutor":True
+            })
+        data = register.json()
+        token = data["token"]
+        res = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        assert res.json() == {
+            "email":"john@example.com",
+            "mobile":"0412345678",
+            "first_name":"John",
+            "last_name":"Doe",
+            "tutor":True
+        }
     
     def test_get_users_no_token(self, reset_data):
-        with pytest.raises(ValueError):
-            auth.get_users("")
+        res = client.get("/users/", headers={"Authorization": f"Bearer"})
+        assert res.status_code == 401
 
     def test_get_users_invalid_token(self, reset_data):
-        with pytest.raises(ValueError):
-            auth.get_users("invalid-token")
+        res = client.get("/users/", headers={"Authorization": f"Bearer invalid-token"})
+        assert res.status_code == 401
         
         
