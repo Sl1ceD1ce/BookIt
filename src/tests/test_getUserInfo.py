@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
-TEST_DB = "test_data.json"
+TEST_DB = "data.json"
 
 @pytest.fixture
 def reset_data():
