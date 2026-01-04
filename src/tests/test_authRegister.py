@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from auth import JWT_SECRET, JWT_ALGORITHM
 
 # Use test database
-TEST_DB = "test_data.json"
+TEST_DB = "data.json"
 
 
 @pytest.fixture
