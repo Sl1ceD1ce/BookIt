@@ -95,7 +95,7 @@ def login_user(login_data) -> dict:
 
 
 def get_users(token: str) -> dict:
-    if is_token_blacklisted(token):
+    if helpers.is_token_blacklisted(token):
         raise ValueError("token is invalid")
 
     decoded_token = decode_jwt_token(token)
@@ -131,12 +131,3 @@ def logout_user(token: str) -> dict:
         return {"message": "Logged out successfully"}
     except ValueError as e:
         raise ValueError(f"Cannot logout: {str(e)}")
-    
-
-def is_token_blacklisted(token: str) -> bool:
-    """Check if token has been invalidated"""
-    data = ds.get_data()
-    for entry in data["invalidated_tokens"]:
-        if entry["token"] == token:
-            return True
-    return False
