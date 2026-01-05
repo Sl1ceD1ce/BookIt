@@ -31,3 +31,11 @@ def find_user_info(decoded_token: dict) -> str:
         if decoded_token["user_id"] == user["id"]:
             return user
     return None
+
+def is_token_blacklisted(token: str) -> bool:
+    """Check if token has been invalidated"""
+    data = ds.get_data()
+    for entry in data["invalidated_tokens"]:
+        if entry["token"] == token:
+            return True
+    return False

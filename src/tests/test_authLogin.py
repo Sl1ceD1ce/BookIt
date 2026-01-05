@@ -11,7 +11,7 @@ TEST_DB = "data.json"
 @pytest.fixture
 def reset_data():
     """Reset datastore before each test"""
-    ds.data = {"users": [], "lessons": []}
+    ds.data = {"users": [], "lessons": [], "invalidated_tokens": []}
     yield
     # Cleanup
     if os.path.exists(TEST_DB):

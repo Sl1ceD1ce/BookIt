@@ -3,7 +3,7 @@ import os
 
 DATABASE_FILE = "data.json"
 
-data = {"users": [], "lessons": []}
+data = {"users": [], "lessons": [], "invalidated_tokens": []}
 
 
 def get_data():
