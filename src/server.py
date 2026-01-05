@@ -31,7 +31,8 @@ async def register_user_route(user_data: UserRegister):
         return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+
 @app.post("/users/login", response_model=UserLoginResponse, status_code=200)
 async def login_user_route(login_data: UserLogin):
     """Login an existing user (student or tutor)."""
@@ -40,6 +41,14 @@ async def login_user_route(login_data: UserLogin):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+@app.post("/users/logout", status_code=200)
+async def logout_user_route(token: str  = Depends(oauth2_scheme)):
+    """Logout an user"""
+    try:
+        return auth.logout_user(token)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
     
 
 @app.get("/users")

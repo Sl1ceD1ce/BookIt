@@ -95,6 +95,8 @@ def login_user(login_data) -> dict:
 
 
 def get_users(token: str) -> dict:
+    if is_token_blacklisted(token):
+        raise ValueError("token is invalid")
 
     decoded_token = decode_jwt_token(token)
     user_data = helpers.find_user_info(decoded_token)
@@ -109,3 +111,32 @@ def get_users(token: str) -> dict:
         "last_name": user_data["last_name"],
         "tutor": user_data["role"] == "tutor",
     }
+
+
+def logout_user(token: str) -> dict:
+    """Invalidate a token by adding it to blacklist"""
+    try:
+        decoded = decode_jwt_token(token)
+        
+        # Add token to blacklist
+        data = ds.get_data()
+        data["invalidated_tokens"].append({
+            "token": token,
+            "user_id": decoded["user_id"],
+            "invalidated_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        ds.save_data()
+        
+        return {"message": "Logged out successfully"}
+    except ValueError as e:
+        raise ValueError(f"Cannot logout: {str(e)}")
+    
+
+def is_token_blacklisted(token: str) -> bool:
+    """Check if token has been invalidated"""
+    data = ds.get_data()
+    for entry in data["invalidated_tokens"]:
+        if entry["token"] == token:
+            return True
+    return False
