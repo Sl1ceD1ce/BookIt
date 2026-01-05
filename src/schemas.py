@@ -39,3 +39,10 @@ class UserResponse(BaseModel):
     mobile: str
     token: str
     message: str
+
+class UserLogin(BaseModel):
+    email: EmailStr = Field(..., max_length=50)
+    password: str = Field(..., min_length=1, max_length=30)
+
+class UserLoginResponse(BaseModel):
+    token: str

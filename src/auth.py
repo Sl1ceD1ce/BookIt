@@ -77,6 +77,23 @@ def register_user(user_data) -> dict:
         "message": "User registered successfully",
     }
 
+
+def login_user(login_data) -> dict:
+    data = ds.get_data()
+
+    user = None
+    for u in data["users"]:
+        if u["password"] == login_data.password and u["email"] == login_data.email:
+            user = u
+
+    if not user:
+        raise ValueError("incorrect username or password")
+
+    token = create_jwt_token(user["id"], user["email"])
+
+    return {"token": token}
+
+
 def get_users(token: str) -> dict:
 
     decoded_token = decode_jwt_token(token)
@@ -84,11 +101,11 @@ def get_users(token: str) -> dict:
 
     if not user_data:
         raise ValueError("user does not exist")
-    
+
     return {
         "email": user_data["email"],
         "mobile": user_data["mobile"],
         "first_name": user_data["first_name"],
         "last_name": user_data["last_name"],
-        "tutor": user_data["role"] == "tutor"
+        "tutor": user_data["role"] == "tutor",
     }

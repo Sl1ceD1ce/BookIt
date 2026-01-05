@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 import dataStore as ds
 import auth
-from schemas import UserRegister, UserResponse
+from schemas import UserRegister, UserResponse, UserLogin, UserLoginResponse
 from contextlib import asynccontextmanager
 
 app = FastAPI()
@@ -31,6 +31,15 @@ async def register_user_route(user_data: UserRegister):
         return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+@app.post("/users/login", response_model=UserLoginResponse, status_code=200)
+async def login_user_route(login_data: UserLogin):
+    """Login an existing user (student or tutor)."""
+    try:
+        return auth.login_user(login_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     
 
 @app.get("/users")
