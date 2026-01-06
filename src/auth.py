@@ -138,10 +138,7 @@ def create_lesson(token: str, lesson_data) -> dict:
     user_data = helpers.find_user_info(decoded_token)
 
     if user_data["role"] != "tutor":
-        raise HTTPException(
-            status_code=403,
-            detail="Only tutors can create lessons"
-        )
+        raise PermissionError("Only tutors can create lessons")
     
     lesson_id = helpers.get_next_lesson_id()
 
