@@ -14,7 +14,7 @@ def create_lesson(token: str, lesson_data) -> dict:
     delta = lesson_data.end_time - lesson_data.start_time
     duration = delta.total_seconds()/60
     
-    if duration <= 0 or duration > 180:
+    if duration <= 0:
         raise ValueError("Invalid time frame")
     
     lesson_id = helpers.get_next_lesson_id()
