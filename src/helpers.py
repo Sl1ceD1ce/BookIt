@@ -11,6 +11,17 @@ def get_next_user_id() -> str:
             max_id = user_id
     return str(max_id + 1)
 
+def get_next_lesson_id() -> str:
+    data = ds.get_data()
+    if not data["lessons"]:
+        return "1"
+    max_id = 0
+    for lesson in data["lessons"]:
+        lesson_id = int(lesson["id"])
+        if lesson_id > max_id:
+            max_id = lesson_id
+    return str(max_id + 1)
+
 def email_exists(email: str) -> bool:
     data = ds.get_data()
     for user in data["users"]:
