@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
+from datetime import datetime
 
 class UserRegister(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=30)
@@ -46,3 +47,18 @@ class UserLogin(BaseModel):
 
 class UserLoginResponse(BaseModel):
     token: str
+
+class LessonCreate(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    subject: str
+
+class LessonCreateResponse(BaseModel):
+    lesson_id: str
+    start_time: datetime
+    end_time: datetime
+    duration: int
+    subject: str
+    tutor_email: str
+    student_email: str | None
+    status: str
