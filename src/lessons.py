@@ -1,12 +1,19 @@
 import helpers
 import dataStore as ds
+from fastapi import HTTPException
 
 # May extend in future to make sure time is in the future
 # But we can simply make the frontend such that it only shows possible times
 def create_lesson(token: str, lesson_data) -> dict:
 
+    if helpers.is_token_blacklisted(token):
+        raise ValueError("token is invalid")
+    
     decoded_token = helpers.decode_jwt_token(token)
     user_data = helpers.find_user_info(decoded_token)
+
+    if not user_data:
+        raise ValueError("user does not exist")
 
     if user_data["role"] != "tutor":
         raise PermissionError("Only tutors can create lessons")
@@ -15,7 +22,7 @@ def create_lesson(token: str, lesson_data) -> dict:
     duration = delta.total_seconds()/60
     
     if duration <= 0:
-        raise ValueError("Invalid time frame")
+        raise HTTPException(status_code=400, detail="Invalid lesson duration")
     
     lesson_id = helpers.get_next_lesson_id()
 

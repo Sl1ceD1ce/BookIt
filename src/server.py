@@ -66,4 +66,4 @@ async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_s
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e))
