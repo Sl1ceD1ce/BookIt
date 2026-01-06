@@ -38,6 +38,7 @@ class TestLessonCreate:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
+                "subject": "Math"
             })
 
         res_data = res.json()
@@ -47,6 +48,7 @@ class TestLessonCreate:
         assert res_data["start_time"] == start_time.isoformat()
         assert res_data["end_time"] == end_time.isoformat()
         assert res_data["duration"] == 60
+        assert res_data["subject"] == "Math"
         assert res_data["tutor_email"] == "john@example.com"
         assert res_data["student_email"] is None
         assert res_data["status"] == "Available"
@@ -67,7 +69,8 @@ class TestLessonCreate:
         res = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time.isoformat(),
-                "end_time": end_time.isoformat()
+                "end_time": end_time.isoformat(),
+                "subject": "English"
             })
         
         assert res.status_code == 403
@@ -88,7 +91,8 @@ class TestLessonCreate:
         res = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time.isoformat(),
-                "end_time": end_time.isoformat()
+                "end_time": end_time.isoformat(),
+                "subject": "Science"
             })
         
         assert res.status_code == 400
@@ -110,6 +114,7 @@ class TestLessonCreate:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
+                "subject": "History"
             })
         
         assert res.status_code == 400

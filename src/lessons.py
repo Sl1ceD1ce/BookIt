@@ -24,6 +24,7 @@ def create_lesson(token: str, lesson_data) -> dict:
         "start_time": lesson_data.start_time,
         "end_time": lesson_data.end_time,
         "duration": duration,
+        "subject": lesson_data.subject,
         "tutor_email": user_data["email"],
         "student_email": None,
         "status": "Available"
