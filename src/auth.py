@@ -153,5 +153,6 @@ def create_lesson(token: str, lesson_data) -> dict:
     }
     
     ds.get_data()["lessons"].append(lesson)
+    user_data["enrolled_lessons"].append(lesson)
 
     return lesson
