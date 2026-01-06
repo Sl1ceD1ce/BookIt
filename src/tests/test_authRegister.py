@@ -9,10 +9,11 @@ import os
 from server import app
 from schemas import UserRegister
 import auth
+import helpers
 from pydantic import ValidationError
 import jwt
 from datetime import datetime, timedelta, timezone
-from auth import JWT_SECRET, JWT_ALGORITHM
+from constants import JWT_SECRET, JWT_ALGORITHM
 from fastapi.testclient import TestClient
 
 
@@ -220,7 +221,7 @@ class TestJWTHandling:
         )
         result = auth.register_user(user_data)
         token = result["token"]
-        decoded = auth.decode_jwt_token(token)
+        decoded = helpers.decode_jwt_token(token)
         assert decoded["email"] == "john@example.com"
         assert "user_id" in decoded
         assert "exp" in decoded
@@ -255,11 +256,11 @@ class TestJWTHandling:
         }
         token = jwt.encode(expired_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
         with pytest.raises(ValueError, match="Token has expired"):
-            auth.decode_jwt_token(token)
+            helpers.decode_jwt_token(token)
 
     def test_invalid_token_raises_error(self, reset_data):
         with pytest.raises(ValueError, match="Invalid token"):
-            auth.decode_jwt_token("invalid.token.here")
+            helpers.decode_jwt_token("invalid.token.here")
 
     def test_tampered_token_raises_error(self, reset_data):
         user = UserRegister(
@@ -273,4 +274,4 @@ class TestJWTHandling:
         result = auth.register_user(user)
         tampered_token = result["token"] + "tamper"
         with pytest.raises(ValueError, match="Invalid token"):
-            auth.decode_jwt_token(tampered_token)
+            helpers.decode_jwt_token(tampered_token)

@@ -1,25 +1,6 @@
-import jwt
-from datetime import datetime, timedelta, timezone
-from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
+from datetime import datetime, timezone
 import helpers
 import dataStore as ds
-from fastapi import HTTPException
-
-def create_jwt_token(user_id: str, email: str) -> str:
-    expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXP_HOURS)
-    payload = {"user_id": user_id, "email": email, "exp": expiration}
-    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    return token
-
-
-def decode_jwt_token(token: str) -> dict:
-    try:
-        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
-    except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
-
 
 def register_user(user_data) -> dict:
     """Register a new user. Accepts Pydantic model directly."""
@@ -65,7 +46,7 @@ def register_user(user_data) -> dict:
     ds.get_data()["users"].append(user)
 
     # Create JWT
-    token = create_jwt_token(user_id, user_data.email)
+    token = helpers.create_jwt_token(user_id, user_data.email)
 
     return {
         "id": user_id,
@@ -89,7 +70,7 @@ def login_user(login_data) -> dict:
     if not user:
         raise ValueError("incorrect username or password")
 
-    token = create_jwt_token(user["id"], user["email"])
+    token = helpers.create_jwt_token(user["id"], user["email"])
 
     return {"token": token}
 
@@ -98,7 +79,7 @@ def get_users(token: str) -> dict:
     if helpers.is_token_blacklisted(token):
         raise ValueError("token is invalid")
 
-    decoded_token = decode_jwt_token(token)
+    decoded_token = helpers.decode_jwt_token(token)
     user_data = helpers.find_user_info(decoded_token)
 
     if not user_data:
@@ -116,7 +97,7 @@ def get_users(token: str) -> dict:
 def logout_user(token: str) -> dict:
     """Invalidate a token by adding it to blacklist"""
     try:
-        decoded = decode_jwt_token(token)
+        decoded = helpers.decode_jwt_token(token)
         
         # Add token to blacklist
         data = ds.get_data()
@@ -131,28 +112,3 @@ def logout_user(token: str) -> dict:
         return {"message": "Logged out successfully"}
     except ValueError as e:
         raise ValueError(f"Cannot logout: {str(e)}")
-
-def create_lesson(token: str, lesson_data) -> dict:
-
-    decoded_token = decode_jwt_token(token)
-    user_data = helpers.find_user_info(decoded_token)
-
-    if user_data["role"] != "tutor":
-        raise PermissionError("Only tutors can create lessons")
-    
-    lesson_id = helpers.get_next_lesson_id()
-
-    lesson = {
-        "lesson_id": lesson_id,
-        "start_time": lesson_data.start_time,
-        "end_time": lesson_data.end_time,
-        "duration": lesson_data.duration,
-        "tutor_email": user_data["email"],
-        "student_email": None,
-        "status": "Available"
-    }
-    
-    ds.get_data()["lessons"].append(lesson)
-    user_data["enrolled_lessons"].append(lesson)
-
-    return lesson

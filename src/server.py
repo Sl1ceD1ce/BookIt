@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 import dataStore as ds
 import auth
+import lessons
 from schemas import UserRegister, UserResponse, UserLogin, UserLoginResponse, LessonCreate, LessonCreateResponse
 from contextlib import asynccontextmanager
 
@@ -61,6 +62,8 @@ async def get_user_route(token: str = Depends(oauth2_scheme)):
 @app.post("/lessons", response_model=LessonCreateResponse, status_code=201)
 async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme)):
     try:
-        return auth.create_lesson(token, lesson_data)
+        return lessons.create_lesson(token, lesson_data)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

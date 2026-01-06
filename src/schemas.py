@@ -51,7 +51,6 @@ class UserLoginResponse(BaseModel):
 class LessonCreate(BaseModel):
     start_time: datetime
     end_time: datetime
-    duration: int = Field(..., gt=0, le=180)
 
 class LessonCreateResponse(BaseModel):
     lesson_id: str
@@ -59,5 +58,5 @@ class LessonCreateResponse(BaseModel):
     end_time: datetime
     duration: int
     tutor_email: str
-    student_email: str
+    student_email: str | None
     status: str

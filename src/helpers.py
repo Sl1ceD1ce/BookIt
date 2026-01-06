@@ -1,4 +1,22 @@
 import dataStore as ds
+import jwt
+from datetime import datetime, timedelta, timezone
+from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
+
+def create_jwt_token(user_id: str, email: str) -> str:
+    expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXP_HOURS)
+    payload = {"user_id": user_id, "email": email, "exp": expiration}
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return token
+
+
+def decode_jwt_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise ValueError("Token has expired")
+    except jwt.InvalidTokenError:
+        raise ValueError("Invalid token")
 
 def get_next_user_id() -> str:
     data = ds.get_data()
