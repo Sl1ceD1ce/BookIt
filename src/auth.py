@@ -107,8 +107,6 @@ def logout_user(token: str) -> dict:
             "invalidated_at": datetime.now(timezone.utc).isoformat()
         })
         
-        ds.save_data()
-        
         return {"message": "Logged out successfully"}
     except ValueError as e:
         raise ValueError(f"Cannot logout: {str(e)}")
