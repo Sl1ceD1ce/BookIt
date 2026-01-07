@@ -3,7 +3,7 @@ import pytest
 import dataStore as ds
 from server import app
 from fastapi.testclient import TestClient
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 client = TestClient(app)
 
@@ -98,7 +98,6 @@ class TestLessonCreate:
         assert res.status_code == 400
 
     def test_unsuccessful_lesson_creation_overlap(self, reset_data):
-        # Register a tutor
         register = client.post("/users/register", json={
             "first_name": "John",
             "last_name": "Doe",
@@ -110,7 +109,6 @@ class TestLessonCreate:
         data = register.json()
         user_token = data["token"]
 
-        # Create the first lesson (valid)
         start_time_1 = datetime(2026, 1, 6, 8, 0)
         end_time_1 = start_time_1 + timedelta(minutes=60)
         res1 = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
@@ -121,8 +119,7 @@ class TestLessonCreate:
             })
         assert res1.status_code == 201
 
-        # Try to create a second lesson that overlaps (starts before the first ends)
-        start_time_2 = datetime(2026, 1, 6, 8, 30)  # overlaps by 30 mins
+        start_time_2 = datetime(2026, 1, 6, 8, 30)  
         end_time_2 = start_time_2 + timedelta(minutes=60)
         res2 = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
             json={
@@ -131,7 +128,5 @@ class TestLessonCreate:
                 "subject": "History"
             })
 
-        # The API should reject it
-        assert res2.status_code == 400 or res2.status_code == 409  # depending on what you decide
-        # Optional: check the error message
+        assert res2.status_code == 400 or res2.status_code == 409  
         assert "overlaps" in res2.json()["detail"].lower()
