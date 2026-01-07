@@ -23,10 +23,7 @@ async def root():
 async def register_user_route(user_data: UserRegister):
     """Register a new user (student or tutor)."""
     try:
-        # Pass Pydantic model directly
         response = auth.register_user(user_data)
-
-        # Save once at the endpoint
         ds.save_data()
 
         return response
@@ -47,7 +44,10 @@ async def login_user_route(login_data: UserLogin):
 async def logout_user_route(token: str  = Depends(oauth2_scheme)):
     """Logout an user"""
     try:
-        return auth.logout_user(token)
+        res = auth.logout_user(token)
+        ds.save_data()
+
+        return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
     
@@ -62,7 +62,10 @@ async def get_user_route(token: str = Depends(oauth2_scheme)):
 @app.post("/lessons", response_model=LessonCreateResponse, status_code=201)
 async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme)):
     try:
-        return lessons.create_lesson(token, lesson_data)
+        res = lessons.create_lesson(token, lesson_data)
+        ds.save_data()
+
+        return res
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
