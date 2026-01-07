@@ -5,6 +5,7 @@ import auth
 import lessons
 from schemas import UserRegister, UserResponse, UserLogin, UserLoginResponse, LessonCreate, LessonCreateResponse
 from contextlib import asynccontextmanager
+from typing import List
 
 app = FastAPI()
 
@@ -68,5 +69,13 @@ async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_s
         return res
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+@app.get("/lessons", response_model=List[LessonCreateResponse], status_code=200)
+async def lesson_get(token: str = Depends(oauth2_scheme)):
+    try:
+        res = lessons.get_user_lessons(token)
+        return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
