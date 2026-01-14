@@ -36,7 +36,7 @@ class TestLessonGet:
         end_time = start_time + timedelta(minutes=60)
 
         create_res = client.post(
-            "/lessons/",
+            "/lessons",
             headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time.isoformat(),

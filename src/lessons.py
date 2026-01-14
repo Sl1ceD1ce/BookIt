@@ -83,3 +83,38 @@ def get_user_lessons(token: str) -> list:
             })
 
     return lessons
+
+def book_lesson(token: str, lesson_id: str) -> dict:
+    if helpers.is_token_blacklisted(token):
+        raise HTTPException(status_code=401, detail="Token is invalid")
+
+    decoded_token = helpers.decode_jwt_token(token)
+    user_data = helpers.find_user_info(decoded_token)
+
+    if not user_data:
+        raise HTTPException(status_code=401, detail="User does not exist")
+    
+    if user_data["role"] != "student":
+        raise HTTPException(status_code=403, detail="Only students can book lessons")
+    
+    lesson_data = helpers.find_lesson_info(lesson_id)
+
+    if not lesson_data:
+        raise HTTPException(status_code=404, detail="Lesson does not exist")
+    
+    if lesson_data["status"] != "Available":
+        raise HTTPException(status_code=409, detail="Lesson is already booked")
+    
+    lesson_data["student_email"] = user_data["email"]
+    lesson_data["status"] = "Booked"
+
+    return {
+        "lesson_id": lesson_data["lesson_id"],
+        "start_time": lesson_data["start_time"],
+        "end_time": lesson_data["end_time"],
+        "duration": lesson_data["duration"],
+        "subject": lesson_data["subject"],
+        "tutor_email": lesson_data["tutor_email"],
+        "student_email": lesson_data["student_email"],
+        "status": lesson_data["status"]
+    }

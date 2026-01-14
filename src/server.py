@@ -60,6 +60,12 @@ async def get_user_route(token: str = Depends(oauth2_scheme)):
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
+@app.post("/lessons/{lesson_id}/book", response_model=LessonCreateResponse, status_code=200)
+async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme)):  
+    res = lessons.book_lesson(token, lesson_id)
+    ds.save_data()
+    return res
+
 @app.post("/lessons", response_model=LessonCreateResponse, status_code=201)
 async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme)):
     try:
@@ -79,3 +85,4 @@ async def lesson_get(token: str = Depends(oauth2_scheme)):
         return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    
