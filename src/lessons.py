@@ -20,7 +20,7 @@ def create_lesson(token: str, lesson_data) -> dict:
         raise PermissionError("Only tutors can create lessons")
     
     delta = lesson_data.end_time - lesson_data.start_time
-    duration = delta.total_seconds()/60
+    duration = int(delta.total_seconds()/60)
     
     if duration <= 0:
         raise HTTPException(status_code=400, detail="Invalid lesson duration")
