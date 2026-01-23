@@ -10,6 +10,7 @@ client = TestClient(app)
 
 TEST_DB = "data.json"
 
+
 @pytest.fixture
 def reset_data():
     """Reset datastore before each test"""
@@ -19,29 +20,36 @@ def reset_data():
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)
 
+
 class TestLessonBook:
 
     def test_successful_booking(self, reset_data):
         # Register tutor
-        tutor_res = client.post("/users/register", json={
-            "first_name": "Jane",
-            "last_name": "Tutor",
-            "email": "jane@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        tutor_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Jane",
+                "last_name": "Tutor",
+                "email": "jane@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         tutor_token = tutor_res.json()["token"]
 
         # Register student
-        student_res = client.post("/users/register", json={
-            "first_name": "Tom",
-            "last_name": "Student",
-            "email": "tom@example.com",
-            "password": "Password123_",
-            "mobile": "0498765432",
-            "tutor": False,
-        })
+        student_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Tom",
+                "last_name": "Student",
+                "email": "tom@example.com",
+                "password": "Password123_",
+                "mobile": "0498765432",
+                "tutor": False,
+            },
+        )
         student_token = student_res.json()["token"]
 
         # Tutor creates a lesson
@@ -53,42 +61,44 @@ class TestLessonBook:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "Physics"
-            }
+                "subject": "Physics",
+            },
         )
         assert lesson_res.status_code == 201
         lesson = lesson_res.json()
-        
-        print(f"\n=== DEBUG INFO ===")
-        print(f"Lesson created: {lesson}")
-        print(f"Lesson ID: {lesson['lesson_id']}")
-        print(f"Lesson ID type: {type(lesson['lesson_id'])}")
 
         # Student books the lesson
         book_url = f"/lessons/{lesson['lesson_id']}/book"
         print(f"Booking URL: {book_url}")
-        
+
         book_res = client.post(
-            book_url,
-            headers={"Authorization": f"Bearer {student_token}"}
+            book_url, headers={"Authorization": f"Bearer {student_token}"}
         )
-        
-        print(f"Response status: {book_res.status_code}")
-        print(f"Response body: {book_res.text}")
-        print(f"=== END DEBUG ===\n")
-        
+
         assert book_res.status_code == 200
+        result = book_res.json()
+        assert "lesson_id" in result
+        assert result["start_time"] == start_time.isoformat()
+        assert result["end_time"] == end_time.isoformat()
+        assert result["duration"] == 60
+        assert result["subject"] == "Physics"
+        assert result["tutor_email"] == "jane@example.com"
+        assert result["student_email"] =="tom@example.com"
+        assert result["status"] == "Booked"
 
     def test_booking_with_tutor_forbidden(self, reset_data):
         # Register tutor
-        tutor_res = client.post("/users/register", json={
-            "first_name": "Jane",
-            "last_name": "Tutor",
-            "email": "jane@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        tutor_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Jane",
+                "last_name": "Tutor",
+                "email": "jane@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         tutor_token = tutor_res.json()["token"]
 
         # Tutor creates a lesson
@@ -100,60 +110,68 @@ class TestLessonBook:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "Math"
-            }
+                "subject": "Math",
+            },
         )
         lesson = lesson_res.json()
 
         # Tutor tries to book their own lesson
         book_res = client.post(
             f"/lessons/{lesson['lesson_id']}/book",
-            headers={"Authorization": f"Bearer {tutor_token}"}
+            headers={"Authorization": f"Bearer {tutor_token}"},
         )
         assert book_res.status_code == 403
         assert "Only students can book lessons" in book_res.json()["detail"]
 
     def test_booking_nonexistent_lesson(self, reset_data):
         # Register student
-        student_res = client.post("/users/register", json={
-            "first_name": "Tom",
-            "last_name": "Student",
-            "email": "tom@example.com",
-            "password": "Password123_",
-            "mobile": "0498765432",
-            "tutor": False,
-        })
+        student_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Tom",
+                "last_name": "Student",
+                "email": "tom@example.com",
+                "password": "Password123_",
+                "mobile": "0498765432",
+                "tutor": False,
+            },
+        )
         student_token = student_res.json()["token"]
 
         # Attempt to book a lesson that doesn't exist
         book_res = client.post(
-            "/lessons/999/book",
-            headers={"Authorization": f"Bearer {student_token}"}
+            "/lessons/999/book", headers={"Authorization": f"Bearer {student_token}"}
         )
         assert book_res.status_code == 404
         assert "Lesson does not exist" in book_res.json()["detail"]
 
     def test_booking_already_booked_lesson(self, reset_data):
         # Register tutor
-        tutor_res = client.post("/users/register", json={
-            "first_name": "Jane",
-            "last_name": "Tutor",
-            "email": "jane@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        tutor_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Jane",
+                "last_name": "Tutor",
+                "email": "jane@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         tutor_token = tutor_res.json()["token"]
 
         # Register student
-        student_res = client.post("/users/register", json={
-            "first_name": "Tom",
-            "last_name": "Student",
-            "email": "tom@example.com",
-            "password": "Password123_",
-            "mobile": "0498765432",
-            "tutor": False,
-        })
+        student_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Tom",
+                "last_name": "Student",
+                "email": "tom@example.com",
+                "password": "Password123_",
+                "mobile": "0498765432",
+                "tutor": False,
+            },
+        )
         student_token = student_res.json()["token"]
 
         # Tutor creates a lesson
@@ -165,22 +183,22 @@ class TestLessonBook:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "Chemistry"
-            }
+                "subject": "Chemistry",
+            },
         )
         lesson = lesson_res.json()
 
         # First booking succeeds
         book_res1 = client.post(
             f"/lessons/{lesson['lesson_id']}/book",
-            headers={"Authorization": f"Bearer {student_token}"}
+            headers={"Authorization": f"Bearer {student_token}"},
         )
         assert book_res1.status_code == 200
 
         # Second booking attempt fails
         book_res2 = client.post(
             f"/lessons/{lesson['lesson_id']}/book",
-            headers={"Authorization": f"Bearer {student_token}"}
+            headers={"Authorization": f"Bearer {student_token}"},
         )
         assert book_res2.status_code == 409
         assert "Lesson is already booked" in book_res2.json()["detail"]
