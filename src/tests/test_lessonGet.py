@@ -4,11 +4,13 @@ import dataStore as ds
 from server import app
 from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
+from helpers import decode_jwt_token
 
 
 client = TestClient(app)
 
 TEST_DB = "data.json"
+
 
 @pytest.fixture
 def reset_data():
@@ -19,16 +21,20 @@ def reset_data():
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)
 
+
 class TestLessonGet:
     def test_get_tutor_lessons(self, reset_data):
-        register = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         data = register.json()
         user_token = data["token"]
 
@@ -41,15 +47,14 @@ class TestLessonGet:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "Math"
-            }
+                "subject": "Math",
+            },
         )
         assert create_res.status_code == 201
         lesson = create_res.json()
 
         get_res = client.get(
-            "/lessons",
-            headers={"Authorization": f"Bearer {user_token}"}
+            "/lessons", headers={"Authorization": f"Bearer {user_token}"}
         )
 
         assert get_res.status_code == 200
@@ -58,30 +63,36 @@ class TestLessonGet:
         assert len(lessons) == 1
         assert lessons[0]["lesson_id"] == lesson["lesson_id"]
         assert lessons[0]["subject"] == "Math"
-        assert lessons[0]["tutor_email"] == "john@example.com"
-        assert lessons[0]["student_email"] is None
-        assert lessons[0]["status"] == "Available"
+        assert lessons[0]["tutor_id"] == decode_jwt_token(user_token)["user_id"]
+        assert lessons[0]["student_id"] is None
+        assert lessons[0]["available"] == True
 
     def test_get_student_lessons_after_booking(self, reset_data):
         # Register tutor
-        tutor_token = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        }).json()["token"]
+        tutor_token = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        ).json()["token"]
 
         # Register student
-        student_token = client.post("/users/register", json={
-            "first_name": "Alice",
-            "last_name": "Smith",
-            "email": "alice@example.com",
-            "password": "Password123_",
-            "mobile": "0498765432",
-            "tutor": False,
-        }).json()["token"]
+        student_token = client.post(
+            "/users/register",
+            json={
+                "first_name": "Alice",
+                "last_name": "Smith",
+                "email": "alice@example.com",
+                "password": "Password123_",
+                "mobile": "0498765432",
+                "tutor": False,
+            },
+        ).json()["token"]
 
         # Tutor creates a lesson
         start_time = datetime.now() + timedelta(hours=1)
@@ -92,20 +103,19 @@ class TestLessonGet:
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "Physics"
-            }
+                "subject": "Physics",
+            },
         ).json()
 
         # Student books the lesson
         client.post(
             f"/lessons/{lesson['lesson_id']}/book",
-            headers={"Authorization": f"Bearer {student_token}"}
+            headers={"Authorization": f"Bearer {student_token}"},
         )
 
         # Student fetches their lessons
         get_res = client.get(
-            "/lessons",
-            headers={"Authorization": f"Bearer {student_token}"}
+            "/lessons", headers={"Authorization": f"Bearer {student_token}"}
         )
         assert get_res.status_code == 200
         lessons_list = get_res.json()
@@ -114,48 +124,60 @@ class TestLessonGet:
         booked_lesson = lessons_list[0]
         assert booked_lesson["lesson_id"] == lesson["lesson_id"]
         assert booked_lesson["subject"] == "Physics"
-        assert booked_lesson["tutor_email"] == "john@example.com"
-        assert booked_lesson["student_email"] == "alice@example.com"
-        assert booked_lesson["status"] == "Booked"
+        assert booked_lesson["tutor_id"] == decode_jwt_token(tutor_token)["user_id"]
+        assert booked_lesson["student_id"] == decode_jwt_token(student_token)["user_id"]
+        assert booked_lesson["available"] == False
 
     def test_get_lessons_multiple_users(self, reset_data):
         # Register tutor
-        tutor1_token = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        }).json()["token"]
+        tutor1_token = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        ).json()["token"]
 
-        tutor2_token = client.post("/users/register", json={
-            "first_name": "Jane",
-            "last_name": "Doe",
-            "email": "jane@example.com",
-            "password": "Password123_",
-            "mobile": "0412345679",
-            "tutor": True,
-        }).json()["token"]
+        tutor2_token = client.post(
+            "/users/register",
+            json={
+                "first_name": "Jane",
+                "last_name": "Doe",
+                "email": "jane@example.com",
+                "password": "Password123_",
+                "mobile": "0412345679",
+                "tutor": True,
+            },
+        ).json()["token"]
 
         # Register students
-        student1_token = client.post("/users/register", json={
-            "first_name": "Alice",
-            "last_name": "Smith",
-            "email": "alice@example.com",
-            "password": "Password123_",
-            "mobile": "0498765432",
-            "tutor": False,
-        }).json()["token"]
+        student1_token = client.post(
+            "/users/register",
+            json={
+                "first_name": "Alice",
+                "last_name": "Smith",
+                "email": "alice@example.com",
+                "password": "Password123_",
+                "mobile": "0498765432",
+                "tutor": False,
+            },
+        ).json()["token"]
 
-        student2_token = client.post("/users/register", json={
-            "first_name": "Bob",
-            "last_name": "Smith",
-            "email": "bob@example.com",
-            "password": "Password123_",
-            "mobile": "0498765433",
-            "tutor": False,
-        }).json()["token"]
+        student2_token = client.post(
+            "/users/register",
+            json={
+                "first_name": "Bob",
+                "last_name": "Smith",
+                "email": "bob@example.com",
+                "password": "Password123_",
+                "mobile": "0498765433",
+                "tutor": False,
+            },
+        ).json()["token"]
 
         # Tutor1 creates a lesson
         lesson1 = client.post(
@@ -164,8 +186,8 @@ class TestLessonGet:
             json={
                 "start_time": datetime.now().isoformat(),
                 "end_time": (datetime.now() + timedelta(hours=1)).isoformat(),
-                "subject": "Physics"
-            }
+                "subject": "Physics",
+            },
         ).json()
 
         # Tutor2 creates a lesson
@@ -175,33 +197,37 @@ class TestLessonGet:
             json={
                 "start_time": datetime.now().isoformat(),
                 "end_time": (datetime.now() + timedelta(hours=1)).isoformat(),
-                "subject": "Chemistry"
-            }
+                "subject": "Chemistry",
+            },
         ).json()
 
         # Student1 books lesson1
         client.post(
             f"/lessons/{lesson1['lesson_id']}/book",
-            headers={"Authorization": f"Bearer {student1_token}"}
+            headers={"Authorization": f"Bearer {student1_token}"},
         )
 
         # Student2 books lesson2
         client.post(
             f"/lessons/{lesson2['lesson_id']}/book",
-            headers={"Authorization": f"Bearer {student2_token}"}
+            headers={"Authorization": f"Bearer {student2_token}"},
         )
 
         # Each student fetches their lessons
-        res1 = client.get("/lessons", headers={"Authorization": f"Bearer {student1_token}"})
-        res2 = client.get("/lessons", headers={"Authorization": f"Bearer {student2_token}"})
+        res1 = client.get(
+            "/lessons", headers={"Authorization": f"Bearer {student1_token}"}
+        )
+        res2 = client.get(
+            "/lessons", headers={"Authorization": f"Bearer {student2_token}"}
+        )
 
         lessons1 = res1.json()
         lessons2 = res2.json()
 
         assert len(lessons1) == 1
         assert lessons1[0]["lesson_id"] == lesson1["lesson_id"]
-        assert lessons1[0]["student_email"] == "alice@example.com"
+        assert lessons1[0]["student_id"] == decode_jwt_token(student1_token)["user_id"]
 
         assert len(lessons2) == 1
         assert lessons2[0]["lesson_id"] == lesson2["lesson_id"]
-        assert lessons2[0]["student_email"] == "bob@example.com"
+        assert lessons2[0]["student_id"] == decode_jwt_token(student2_token)["user_id"]
