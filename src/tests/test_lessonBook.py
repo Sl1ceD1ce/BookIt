@@ -4,6 +4,7 @@ import pytest
 import dataStore as ds
 from server import app
 from fastapi.testclient import TestClient
+from helpers import decode_jwt_token
 
 
 client = TestClient(app)
@@ -82,9 +83,9 @@ class TestLessonBook:
         assert result["end_time"] == end_time.isoformat()
         assert result["duration"] == 60
         assert result["subject"] == "Physics"
-        assert result["tutor_email"] == "jane@example.com"
-        assert result["student_email"] =="tom@example.com"
-        assert result["status"] == "Booked"
+        assert result["tutor_id"] == decode_jwt_token(tutor_token)["user_id"]
+        assert result["student_id"] == decode_jwt_token(student_token)["user_id"]
+        assert result["available"] == False
 
     def test_booking_with_tutor_forbidden(self, reset_data):
         # Register tutor

@@ -12,7 +12,7 @@ def register_user(user_data) -> dict:
         raise ValueError("mobile number already registered")
 
     # Generate ID
-    user_id = helpers.get_next_user_id()
+    user_id = helpers.generate_id()
 
     # Create user dict
     user = {
@@ -46,7 +46,7 @@ def register_user(user_data) -> dict:
     ds.get_data()["users"].append(user)
 
     # Create JWT
-    token = helpers.create_jwt_token(user_id, user_data.email)
+    token = helpers.create_jwt_token(user_id)
 
     return {
         "id": user_id,
@@ -70,7 +70,7 @@ def login_user(login_data) -> dict:
     if not user:
         raise ValueError("incorrect username or password")
 
-    token = helpers.create_jwt_token(user["id"], user["email"])
+    token = helpers.create_jwt_token(user["id"])
 
     return {"token": token}
 

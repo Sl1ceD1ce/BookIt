@@ -5,6 +5,7 @@ from server import app
 from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from helper_testFunctions import standardTutorLesson, standardTutorStudentLesson
+import helpers
 
 client = TestClient(app)
 
@@ -69,8 +70,8 @@ class TestLessonUpdate:
                 "start_time": newStart.isoformat(),
                 "end_time": newEnd.isoformat(),
                 "subject": "Physics",
-                "student_email": None,
-                "status": "Unavailable",
+                "student_id": None,
+                "available": True,
             },
         )
 
@@ -92,9 +93,9 @@ class TestLessonUpdate:
         assert lessons[0]["subject"] == "Physics"
         assert lessons[0]["start_time"] == newStart.isoformat()
         assert lessons[0]["end_time"] == newEnd.isoformat()
-        assert lessons[0]["tutor_email"] == "john@example.com"
-        assert lessons[0]["student_email"] is None
-        assert lessons[0]["status"] == "Unavailable"
+        assert lessons[0]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
+        assert lessons[0]["student_id"] is None
+        assert lessons[0]["available"] == True
 
     def test_successfulLessonStudentUpdate(self, reset_data):
         tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
@@ -103,13 +104,13 @@ class TestLessonUpdate:
 
         lessonData = lessonJson.json()
 
-        assert lessonData["status"] == "Booked"
-        assert lessonData["student_email"] == "jimmybutler@example.com"
+        assert lessonData["available"] == False
+        assert lessonData["student_id"] == helpers.decode_jwt_token(studentToken)["user_id"]
 
         patchRes = client.patch(
             f"/lessons/{lessonData['lesson_id']}",
             headers={"Authorization": f"Bearer {studentToken}"},
-            json={"student_email": None, "status": "Available"},
+            json={"student_email": None, "available": False},
         )
 
         assert patchRes.status_code == 200
@@ -127,9 +128,9 @@ class TestLessonUpdate:
         assert lessons[0]["subject"] == "Math"
         assert lessons[0]["start_time"] == startTime.isoformat()
         assert lessons[0]["end_time"] == endTime.isoformat()
-        assert lessons[0]["tutor_email"] == "john@example.com"
-        assert lessons[0]["student_email"] is None
-        assert lessons[0]["status"] == "Available"
+        assert lessons[0]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
+        assert lessons[0]["student_id"] is None
+        assert lessons[0]["available"] == False
 
     def test_wrongRole(self, reset_data):
         tutorToken, lessonJson, studentToken = standardTutorStudentLesson(

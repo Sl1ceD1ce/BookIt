@@ -4,10 +4,12 @@ import dataStore as ds
 from server import app
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
+from helpers import decode_jwt_token
 
 client = TestClient(app)
 
 TEST_DB = "data.json"
+
 
 @pytest.fixture
 def reset_data():
@@ -18,28 +20,35 @@ def reset_data():
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)
 
+
 class TestLessonCreate:
 
     def test_successful_lesson_creation(self, reset_data):
-        register = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         data = register.json()
         user_token = data["token"]
-        start_time = datetime(2026, 1, 6, 8, 0) # 2026-01-06 08:00:00
+        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
         end_time = start_time + timedelta(minutes=60)
-        
-        res = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
+
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "Math"
-            })
+                "subject": "Math",
+            },
+        )
 
         res_data = res.json()
 
@@ -49,84 +58,105 @@ class TestLessonCreate:
         assert res_data["end_time"] == end_time.isoformat()
         assert res_data["duration"] == 60
         assert res_data["subject"] == "Math"
-        assert res_data["tutor_email"] == "john@example.com"
-        assert res_data["student_email"] is None
-        assert res_data["status"] == "Available"
+        assert res_data["tutor_id"] == decode_jwt_token(user_token)["user_id"]
+        assert res_data["student_id"] is None
+        assert res_data["available"] == True
 
     def test_unsuccessful_lesson_creation_student(self, reset_data):
-        register = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": False,
-        })
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": False,
+            },
+        )
         data = register.json()
         user_token = data["token"]
-        start_time = datetime(2026, 1, 6, 8, 0) # 2026-01-06 08:00:00
+        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
         end_time = start_time + timedelta(minutes=60)
-        res = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "English"
-            })
-        
+                "subject": "English",
+            },
+        )
+
         assert res.status_code == 403
-    
+
     def test_unsuccessful_lesson_creation_invalid_duration(self, reset_data):
-        register = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         data = register.json()
         user_token = data["token"]
-        start_time = datetime(2026, 1, 6, 8, 0) # 2026-01-06 08:00:00
+        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
         end_time = start_time + timedelta(minutes=-20)
-        res = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time.isoformat(),
                 "end_time": end_time.isoformat(),
-                "subject": "History"
-            })
-        
+                "subject": "History",
+            },
+        )
+
         assert res.status_code == 400
 
     def test_unsuccessful_lesson_creation_overlap(self, reset_data):
-        register = client.post("/users/register", json={
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "john@example.com",
-            "password": "Password123_",
-            "mobile": "0412345678",
-            "tutor": True,
-        })
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
         data = register.json()
         user_token = data["token"]
 
         start_time_1 = datetime(2026, 1, 6, 8, 0)
         end_time_1 = start_time_1 + timedelta(minutes=60)
-        res1 = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
+        res1 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time_1.isoformat(),
                 "end_time": end_time_1.isoformat(),
-                "subject": "Math"
-            })
+                "subject": "Math",
+            },
+        )
         assert res1.status_code == 201
 
-        start_time_2 = datetime(2026, 1, 6, 8, 30)  
+        start_time_2 = datetime(2026, 1, 6, 8, 30)
         end_time_2 = start_time_2 + timedelta(minutes=60)
-        res2 = client.post("/lessons/", headers={"Authorization": f"Bearer {user_token}"},
+        res2 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
             json={
                 "start_time": start_time_2.isoformat(),
                 "end_time": end_time_2.isoformat(),
-                "subject": "History"
-            })
+                "subject": "History",
+            },
+        )
 
-        assert res2.status_code == 400 or res2.status_code == 409  
+        assert res2.status_code == 400 or res2.status_code == 409
         assert "overlaps" in res2.json()["detail"].lower()
