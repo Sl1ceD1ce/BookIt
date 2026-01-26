@@ -12,7 +12,7 @@ def register_user(user_data) -> dict:
         raise ValueError("mobile number already registered")
 
     # Generate ID
-    user_id = helpers.get_next_user_id()
+    user_id = helpers.generate_id()
 
     # Create user dict
     user = {

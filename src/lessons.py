@@ -37,7 +37,7 @@ def create_lesson(token: str, lesson_data) -> dict:
         if (lesson_data.start_time < existing_end and existing_start < lesson_data.end_time):
             raise HTTPException(status_code=400, detail="Lesson overlaps with existing lesson")
     
-    lesson_id = helpers.get_next_lesson_id()
+    lesson_id = helpers.generate_id()
 
     lesson = {
         "lesson_id": lesson_id,

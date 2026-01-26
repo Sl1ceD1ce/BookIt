@@ -2,6 +2,7 @@ import dataStore as ds
 import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
+import uuid
 
 def create_jwt_token(user_id: str, email: str) -> str:
     expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXP_HOURS)
@@ -18,27 +19,9 @@ def decode_jwt_token(token: str) -> dict:
     except jwt.InvalidTokenError:
         raise ValueError("Invalid token")
 
-def get_next_user_id() -> str:
-    data = ds.get_data()
-    if not data["users"]:
-        return "1"
-    max_id = 0
-    for user in data["users"]:
-        user_id = int(user["id"])
-        if user_id > max_id:
-            max_id = user_id
-    return str(max_id + 1)
-
-def get_next_lesson_id() -> str:
-    data = ds.get_data()
-    if not data["lessons"]:
-        return "1"
-    max_id = 0
-    for lesson in data["lessons"]:
-        lesson_id = int(lesson["lesson_id"])
-        if lesson_id > max_id:
-            max_id = lesson_id
-    return str(max_id + 1)
+def generate_id() -> str:
+    """Generates a random id using uuid4"""
+    return str(uuid.uuid4())
 
 def email_exists(email: str) -> bool:
     data = ds.get_data()
