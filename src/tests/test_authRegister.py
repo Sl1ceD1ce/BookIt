@@ -257,7 +257,6 @@ class TestJWTHandling:
         result = auth.register_user(user_data)
         token = result["token"]
         decoded = helpers.decode_jwt_token(token)
-        assert decoded["email"] == "john@example.com"
         assert "user_id" in decoded
         assert "exp" in decoded
 

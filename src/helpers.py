@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 import uuid
 
-def create_jwt_token(user_id: str, email: str) -> str:
+def create_jwt_token(user_id: str) -> str:
     expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXP_HOURS)
-    payload = {"user_id": user_id, "email": email, "exp": expiration}
+    payload = {"user_id": user_id, "exp": expiration}
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return token
 
