@@ -41,6 +41,8 @@ sampleStudent = {
 
 startTime = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
 endTime = startTime + timedelta(minutes=60)
+newStart = datetime(2026, 1, 7, 8, 0)  # 2026-01-06 08:00:00
+newEnd = newStart + timedelta(minutes=60)
 
 sampleLesson = {
     "start_time": startTime.isoformat(),
@@ -54,12 +56,11 @@ class TestLessonUpdate:
 
     def test_successfulLessonTutorUpdate(self, reset_data):
         # sets up a standard tutor instance and lesson instance
-        tutorToken, lessonJson = standardTutorLesson(client, sampleTutor, sampleLesson)
+        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
+            client, sampleTutor, sampleLesson, sampleStudent
+        )
 
         lessonData = lessonJson.json()
-
-        newStart = datetime(2026, 1, 7, 8, 0)  # 2026-01-06 08:00:00
-        newEnd = newStart + timedelta(minutes=60)
 
         patchRes = client.patch(
             f"/lessons/{lessonData['lesson_id']}",
@@ -68,11 +69,16 @@ class TestLessonUpdate:
                 "start_time": newStart.isoformat(),
                 "end_time": newEnd.isoformat(),
                 "subject": "Physics",
+                "student_email": None,
+                "status": "Unavailable",
             },
         )
 
-        patchRes = patchRes.json()
+        if patchRes.status_code != 200:
+            print(patchRes.json())
+
         assert patchRes.status_code == 200
+        patchRes = patchRes.json()
 
         getRes = client.get(
             "/lessons", headers={"Authorization": f"Bearer {tutorToken}"}
@@ -84,29 +90,100 @@ class TestLessonUpdate:
         assert len(lessons) == 1
         assert lessons[0]["lesson_id"] == lessonData["lesson_id"]
         assert lessons[0]["subject"] == "Physics"
-        assert lessons[0]["start_time"] == newStart
-        assert lessons[0]["end_time"] == newEnd
+        assert lessons[0]["start_time"] == newStart.isoformat()
+        assert lessons[0]["end_time"] == newEnd.isoformat()
         assert lessons[0]["tutor_email"] == "john@example.com"
         assert lessons[0]["student_email"] is None
-        assert lessons[0]["status"] == "Available"
+        assert lessons[0]["status"] == "Unavailable"
 
     def test_successfulLessonStudentUpdate(self, reset_data):
         tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, studentToken
+            client, sampleTutor, sampleLesson, sampleStudent
         )
 
         lessonData = lessonJson.json()
 
-        
+        assert lessonData["status"] == "Booked"
+        assert lessonData["student_email"] == "jimmybutler@example.com"
 
         patchRes = client.patch(
             f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {tutorToken}"},
+            headers={"Authorization": f"Bearer {studentToken}"},
+            json={"student_email": None, "status": "Available"},
+        )
+
+        assert patchRes.status_code == 200
+        patchRes = patchRes.json()
+
+        getRes = client.get(
+            "/lessons", headers={"Authorization": f"Bearer {tutorToken}"}
+        )
+
+        assert getRes.status_code == 200
+        lessons = getRes.json()
+
+        assert len(lessons) == 1
+        assert lessons[0]["lesson_id"] == lessonData["lesson_id"]
+        assert lessons[0]["subject"] == "Math"
+        assert lessons[0]["start_time"] == startTime.isoformat()
+        assert lessons[0]["end_time"] == endTime.isoformat()
+        assert lessons[0]["tutor_email"] == "john@example.com"
+        assert lessons[0]["student_email"] is None
+        assert lessons[0]["status"] == "Available"
+
+    def test_wrongRole(self, reset_data):
+        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
+            client, sampleTutor, sampleLesson, sampleStudent
+        )
+
+        lessonData = lessonJson.json()
+
+        patchRes = client.patch(
+            f"/lessons/{lessonData['lesson_id']}",
+            headers={"Authorization": f"Bearer {studentToken}"},
             json={
-                
+                "start_time": newStart.isoformat(),
+                "end_time": newEnd.isoformat(),
+                "subject": "Physics",
             },
         )
 
-        
+        assert patchRes.status_code == 403
 
+    def test_invalidToken(self, reset_data):
+        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
+            client, sampleTutor, sampleLesson, sampleStudent
+        )
 
+        lessonData = lessonJson.json()
+
+        patchRes = client.patch(
+            f"/lessons/{lessonData['lesson_id']}",
+            headers={"Authorization": f"Bearer {"fakeToken123"}"},
+            json={
+                "start_time": newStart.isoformat(),
+                "end_time": newEnd.isoformat(),
+                "subject": "Physics",
+            },
+        )
+
+        assert patchRes.status_code == 401
+
+    def test_nonExistentLesson(self, reset_data):
+        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
+            client, sampleTutor, sampleLesson, sampleStudent
+        )
+
+        lessonData = lessonJson.json()
+
+        patchRes = client.patch(
+            f"/lessons/{"1394819509158"}",
+            headers={"Authorization": f"Bearer {tutorToken}"},
+            json={
+                "start_time": newStart.isoformat(),
+                "end_time": newEnd.isoformat(),
+                "subject": "Physics",
+            },
+        )
+
+        assert patchRes.status_code == 404

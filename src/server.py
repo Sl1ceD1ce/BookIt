@@ -3,7 +3,15 @@ from fastapi.security import OAuth2PasswordBearer
 import dataStore as ds
 import auth
 import lessons
-from schemas import UserRegister, UserResponse, UserLogin, UserLoginResponse, LessonCreate, LessonCreateResponse, LessonUpdate
+from schemas import (
+    UserRegister,
+    UserResponse,
+    UserLogin,
+    UserLoginResponse,
+    LessonCreate,
+    LessonResponse,
+    LessonUpdate,
+)
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -11,14 +19,17 @@ app = FastAPI()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 @asynccontextmanager
 async def startup_event():
     ds.load_data()
-    yield # makes all code before it execute at startup and everything after at shutdown
+    yield  # makes all code before it execute at startup and everything after at shutdown
+
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
 
 @app.post("/users/register", response_model=UserResponse, status_code=201)
 async def register_user_route(user_data: UserRegister):
@@ -42,7 +53,7 @@ async def login_user_route(login_data: UserLogin):
 
 
 @app.post("/users/logout", status_code=200)
-async def logout_user_route(token: str  = Depends(oauth2_scheme)):
+async def logout_user_route(token: str = Depends(oauth2_scheme)):
     """Logout an user"""
     try:
         res = auth.logout_user(token)
@@ -51,22 +62,24 @@ async def logout_user_route(token: str  = Depends(oauth2_scheme)):
         return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-    
+
 
 @app.get("/users", status_code=200)
 async def get_user_route(token: str = Depends(oauth2_scheme)):
-    try: 
+    try:
         return auth.get_users(token)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-@app.post("/lessons/{lesson_id}/book", response_model=LessonCreateResponse, status_code=200)
-async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme)):  
+
+@app.post("/lessons/{lesson_id}/book", response_model=LessonResponse, status_code=200)
+async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme)):
     res = lessons.book_lesson(token, lesson_id)
     ds.save_data()
     return res
 
-@app.post("/lessons", response_model=LessonCreateResponse, status_code=201)
+
+@app.post("/lessons", response_model=LessonResponse, status_code=201)
 async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme)):
     try:
         res = lessons.create_lesson(token, lesson_data)
@@ -78,16 +91,20 @@ async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_s
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-@app.get("/lessons", response_model=List[LessonCreateResponse], status_code=200)
+
+@app.get("/lessons", response_model=List[LessonResponse], status_code=200)
 async def lesson_get(token: str = Depends(oauth2_scheme)):
     try:
         res = lessons.get_user_lessons(token)
         return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-    
+
+
 @app.patch("/lessons/{lesson_id}", status_code=200)
-async def lesson_get(update_data: LessonUpdate, lesson_id: str, token: str = Depends(oauth2_scheme)):
+async def lesson_update(
+    update_data: LessonUpdate, lesson_id: str, token: str = Depends(oauth2_scheme)
+):
     try:
         res = lessons.update_lesson(token, lesson_id, update_data)
         ds.save_data()
@@ -97,4 +114,3 @@ async def lesson_get(update_data: LessonUpdate, lesson_id: str, token: str = Dep
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-    

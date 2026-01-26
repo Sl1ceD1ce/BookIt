@@ -25,13 +25,11 @@ def standardTutorStudentLesson(client: TestClient, tutor_input: object, lesson_i
     studentData = studentRegister.json()
     studentToken = studentData["token"]
 
-    book_res = client.post(
+    bookRes = client.post(
         f"/lessons/{lesson['lesson_id']}/book", headers={"Authorization": f"Bearer {studentToken}"}
     )
 
-    bookRes = client.post("/lessons/{lesson_id}/book")
-
-    return tutorToken, lessonRes, studentToken
+    return tutorToken, bookRes, studentToken
 
 
 # def standard_Tutor_Lesson():

@@ -1,6 +1,8 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 from datetime import datetime
+from typing import Optional
+
 
 class UserRegister(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=30)
@@ -10,27 +12,30 @@ class UserRegister(BaseModel):
     mobile: str
     tutor: bool
 
-    @field_validator('first_name', 'last_name')
+    @field_validator("first_name", "last_name")
     @classmethod
     def validate_name(cls, v):
         if not v.strip():
-            raise ValueError('name cannot be empty or just whitespace')
+            raise ValueError("name cannot be empty or just whitespace")
         return v.strip()
 
-    @field_validator('password')
+    @field_validator("password")
     @classmethod
     def validate_password(cls, v):
-        if not re.match(r'^[A-Za-z0-9_]+$', v):
-            raise ValueError('password can only contain letters, numbers, and underscores')
+        if not re.match(r"^[A-Za-z0-9_]+$", v):
+            raise ValueError(
+                "password can only contain letters, numbers, and underscores"
+            )
         return v
-    
-    @field_validator('mobile')
+
+    @field_validator("mobile")
     @classmethod
     def validate_mobile(cls, v):
-        mobile_str = str(v).replace(' ', '').replace('-', '')
-        if not re.match(r'^04\d{8}$', mobile_str):
-            raise ValueError('invalid mobile number format')
+        mobile_str = str(v).replace(" ", "").replace("-", "")
+        if not re.match(r"^04\d{8}$", mobile_str):
+            raise ValueError("invalid mobile number format")
         return mobile_str
+
 
 class UserResponse(BaseModel):
     id: str
@@ -41,17 +46,21 @@ class UserResponse(BaseModel):
     token: str
     message: str
 
+
 class UserLogin(BaseModel):
     email: EmailStr = Field(..., max_length=50)
     password: str = Field(..., min_length=1, max_length=30)
 
+
 class UserLoginResponse(BaseModel):
     token: str
+
 
 class LessonCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     subject: str
+
 
 class LessonResponse(BaseModel):
     lesson_id: str
@@ -60,12 +69,13 @@ class LessonResponse(BaseModel):
     duration: int
     subject: str
     tutor_email: str
-    student_email: EmailStr = Field(..., max_length=50) | None
+    student_email: str | None
     status: str
 
+
 class LessonUpdate(BaseModel):
-    start_time: datetime 
-    end_time: datetime
-    subject: str
-    student_email: EmailStr = Field(..., max_length=50) | None
-    status: str 
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    subject: Optional[str] = None
+    student_email: Optional[str] = None
+    status: Optional[str] = None
