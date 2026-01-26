@@ -7,7 +7,6 @@ from datetime import datetime
 # May extend in future to make sure time is in the future
 # But we can simply make the frontend such that it only shows possible times
 def create_lesson(token: str, lesson_data) -> dict:
-
     if helpers.is_token_blacklisted(token):
         raise ValueError("token is invalid")
 
@@ -28,7 +27,7 @@ def create_lesson(token: str, lesson_data) -> dict:
 
     existing_lessons = []
     for lesson in ds.get_data()["lessons"]:
-        if lesson["tutor_email"] == user_data["email"]:
+        if lesson["tutor_id"] == user_data["id"]:
             existing_lessons.append(lesson)
 
     for lesson in existing_lessons:
@@ -46,9 +45,9 @@ def create_lesson(token: str, lesson_data) -> dict:
         "end_time": lesson_data.end_time.isoformat(),
         "duration": duration,
         "subject": lesson_data.subject,
-        "tutor_email": user_data["email"],
-        "student_email": None,
-        "status": "Available",
+        "tutor_id": user_data["id"],
+        "assigned_student_id": None,
+        "available": True,
     }
 
     ds.get_data()["lessons"].append(lesson)
@@ -67,12 +66,12 @@ def get_user_lessons(token: str) -> list:
     if not user_data:
         raise ValueError("user does not exist")
 
-    user_email = user_data["email"]
+    user_id = decoded_token["user_id"]
 
     # Filter lessons where the user is tutor or student
     lessons = []
     for lesson in ds.get_data()["lessons"]:
-        if lesson["tutor_email"] == user_email or lesson["student_email"] == user_email:
+        if lesson["tutor_id"] == user_id or lesson["student_id"] == user_id:
             lessons.append(
                 {
                     "lesson_id": lesson["lesson_id"],
@@ -80,9 +79,9 @@ def get_user_lessons(token: str) -> list:
                     "end_time": lesson["end_time"],
                     "duration": lesson["duration"],
                     "subject": lesson["subject"],
-                    "tutor_email": lesson["tutor_email"],
-                    "student_email": lesson["student_email"],
-                    "status": lesson["status"],
+                    "tutor_id": lesson["tutor_id"],
+                    "student_id": lesson.get("student_id"),
+                    "available": lesson["available"],
                 }
             )
 
@@ -107,11 +106,11 @@ def book_lesson(token: str, lesson_id: str) -> dict:
     if not lesson_data:
         raise HTTPException(status_code=404, detail="Lesson does not exist")
 
-    if lesson_data["status"] != "Available":
+    if lesson_data["available"] == False:
         raise HTTPException(status_code=409, detail="Lesson is already booked")
 
-    lesson_data["student_email"] = user_data["email"]
-    lesson_data["status"] = "Booked"
+    lesson_data["student_id"] = user_data["id"]
+    lesson_data["available"] = False
 
     return {
         "lesson_id": lesson_data["lesson_id"],
@@ -119,9 +118,9 @@ def book_lesson(token: str, lesson_id: str) -> dict:
         "end_time": lesson_data["end_time"],
         "duration": lesson_data["duration"],
         "subject": lesson_data["subject"],
-        "tutor_email": lesson_data["tutor_email"],
-        "student_email": lesson_data["student_email"],
-        "status": lesson_data["status"],
+        "tutor_id": lesson_data["tutor_id"],
+        "student_id": lesson_data.get("student_id"),
+        "available": lesson_data["available"],
     }
 
 
@@ -146,8 +145,8 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
         # TODO: After transferring lessons to be id based instead of email based
         # Make it such that we validate that the student has this tutor as a tutor
 
-        lesson_data["student_email"] = update_data.student_email
-        lesson_data["status"] = update_data.status
+        lesson_data["student_id"] = update_data.student_id
+        lesson_data["available"] = update_data.available
 
         return lesson_data
     elif user_data["role"] == "tutor":
@@ -158,8 +157,8 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
         if update_data.subject is not None:
             lesson_data["subject"] = update_data.subject
         # Always update student_email and status (even if None)
-        lesson_data["student_email"] = update_data.student_email
-        lesson_data["status"] = update_data.status
+        lesson_data["student_id"] = update_data.student_id
+        lesson_data["available"] = update_data.available
 
         return lesson_data
     else:

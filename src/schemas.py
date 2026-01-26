@@ -68,14 +68,14 @@ class LessonResponse(BaseModel):
     end_time: datetime
     duration: int
     subject: str
-    tutor_email: str
-    student_email: str | None
-    status: str
+    tutor_id: str
+    student_id: Optional[str] = None
+    available: bool
 
 
 class LessonUpdate(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     subject: Optional[str] = None
-    student_email: Optional[str] = None
-    status: Optional[str] = None
+    student_id: Optional[str] = None
+    available: Optional[bool] = None
