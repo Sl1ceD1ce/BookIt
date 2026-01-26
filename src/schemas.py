@@ -53,12 +53,19 @@ class LessonCreate(BaseModel):
     end_time: datetime
     subject: str
 
-class LessonCreateResponse(BaseModel):
+class LessonResponse(BaseModel):
     lesson_id: str
     start_time: datetime
     end_time: datetime
     duration: int
     subject: str
     tutor_email: str
-    student_email: str | None
+    student_email: EmailStr = Field(..., max_length=50) | None
     status: str
+
+class LessonUpdate(BaseModel):
+    start_time: datetime 
+    end_time: datetime
+    subject: str
+    student_email: EmailStr = Field(..., max_length=50) | None
+    status: str 

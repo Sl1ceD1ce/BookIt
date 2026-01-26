@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 import dataStore as ds
 import auth
 import lessons
-from schemas import UserRegister, UserResponse, UserLogin, UserLoginResponse, LessonCreate, LessonCreateResponse
+from schemas import UserRegister, UserResponse, UserLogin, UserLoginResponse, LessonCreate, LessonCreateResponse, LessonUpdate
 from contextlib import asynccontextmanager
 from typing import List
 
@@ -83,6 +83,18 @@ async def lesson_get(token: str = Depends(oauth2_scheme)):
     try:
         res = lessons.get_user_lessons(token)
         return res
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    
+@app.patch("/lessons/{lesson_id}", status_code=200)
+async def lesson_get(update_data: LessonUpdate, lesson_id: str, token: str = Depends(oauth2_scheme)):
+    try:
+        res = lessons.update_lesson(token, lesson_id, update_data)
+        ds.save_data()
+
+        return res
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
     
