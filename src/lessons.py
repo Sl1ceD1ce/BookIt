@@ -163,3 +163,30 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
         return lesson_data
     else:
         raise HTTPException(status_code=401, detail="User has invalid role")
+
+
+def delete_lesson(token: str, lesson_id: str) -> str:
+    if helpers.is_token_blacklisted(token):
+        raise HTTPException(status_code=401, detail="Token is invalid")
+
+    decoded_token = helpers.decode_jwt_token(token)
+    user_data = helpers.find_user_info(decoded_token)
+    lesson_data = helpers.find_lesson_info(lesson_id)
+
+    if not user_data:
+        raise HTTPException(status_code=401, detail="User does not exist")
+
+    if not lesson_data:
+        raise HTTPException(status_code=404, detail="Lesson does not exist")
+
+    if user_data["role"] == "student":
+        raise HTTPException(status_code=403, detail="Only tutors can modify this")
+
+    if user_data["id"] != lesson_data["tutor_id"]:
+         raise HTTPException(status_code=403, detail="User does not own lesson")
+    
+    helpers.get_lessons().remove(lesson_data)
+
+    return {"message": "lesson deleted successfully"}
+    
+
