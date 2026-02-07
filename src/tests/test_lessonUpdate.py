@@ -75,9 +75,6 @@ class TestLessonUpdate:
             },
         )
 
-        if patchRes.status_code != 200:
-            print(patchRes.json())
-
         assert patchRes.status_code == 200
         patchRes = patchRes.json()
 
