@@ -1,10 +1,10 @@
 from server import app
 from fastapi.testclient import TestClient
 
-def standardTutorLesson(client: TestClient, tutor_input: object, lesson_input: object):
+def standardTutorLesson(client: TestClient, tutorInput: object, lessonInput: object):
     """Creates a standard tutor and lesson instance"""
 
-    register = client.post("/users/register", json=tutor_input)
+    register = client.post("/users/register", json=tutorInput)
     
     data = register.json()
     userToken = data["token"]
@@ -12,14 +12,16 @@ def standardTutorLesson(client: TestClient, tutor_input: object, lesson_input: o
     lessonRes = client.post(
         "/lessons",
         headers={"Authorization": f"Bearer {userToken}"},
-        json=lesson_input)
+        json=lessonInput)
     
     return userToken, lessonRes
 
-def standardTutorStudentLesson(client: TestClient, tutor_input: object, lesson_input: object, student_input: object):
-    tutorToken, lessonRes = standardTutorLesson(client, tutor_input, lesson_input)
+def standardTutorStudentLesson(client: TestClient, tutorInput: object, lessonInput: object, studentInput: object):
+    """Creates a tutor, student and lesson with a student booked into the lesson created by the tutor"""
 
-    studentRegister = client.post("/users/register", json=student_input)
+    tutorToken, lessonRes = standardTutorLesson(client, tutorInput, lessonInput)
+
+    studentRegister = client.post("/users/register", json=studentInput)
     lesson = lessonRes.json()
 
     studentData = studentRegister.json()
@@ -31,9 +33,21 @@ def standardTutorStudentLesson(client: TestClient, tutor_input: object, lesson_i
 
     return tutorToken, bookRes, studentToken
 
+def tutorLessons(client: TestClient, tutorInput: object, lessonInputs: list):
+    """Creates a tutor and X amount of lessons. Where X is the number of lessonInputs"""
 
-# def standard_Tutor_Lesson():
+    register = client.post("/users/register", json=tutorInput)
+    
+    data = register.json()
+    userToken = data["token"]
 
+    lessonResponses = list()
 
-
-# def standard_Student_Tutor_Lesson():
+    for lessonInput in lessonInputs:
+        lessonResponses.append(client.post(
+            "/lessons",
+            headers={"Authorization": f"Bearer {userToken}"},
+            json=lessonInput).json())
+    
+    return userToken, lessonResponses
+        

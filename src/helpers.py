@@ -12,6 +12,14 @@ def create_jwt_token(user_id: str) -> str:
 
 
 def decode_jwt_token(token: str) -> dict:
+    """
+    Docstring for decode_jwt_token
+    
+    :param token: A JWT token
+    :type token: str
+    :return: A dictionary containing user_id and exp (expiration date)
+    :rtype: dict
+    """
     try:
         return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
@@ -58,3 +66,7 @@ def find_lesson_info(lesson_id: str) -> dict | None:
         if lesson_id == lesson["lesson_id"]:
             return lesson
     return None
+
+def get_lessons() -> list:
+    data = ds.get_data()
+    return data["lessons"]

@@ -114,3 +114,18 @@ async def lesson_update(
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    
+
+@app.delete("/lessons/{lesson_id}", status_code=200)
+async def lesson_update(
+    lesson_id: str, token: str = Depends(oauth2_scheme)
+):
+    try:
+        res = lessons.delete_lesson(token, lesson_id)
+        ds.save_data()
+
+        return res
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
