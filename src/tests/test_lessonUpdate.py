@@ -175,7 +175,7 @@ class TestLessonUpdate:
         lessonData = lessonJson.json()
 
         patchRes = client.patch(
-            f"/lessons/{"1394819509158"}",
+            "/lessons/{1394819509158}",
             headers={"Authorization": f"Bearer {tutorToken}"},
             json={
                 "start_time": newStart.isoformat(),
