@@ -18,6 +18,12 @@ def create_lesson(token: str, lesson_data) -> dict:
 
     if user_data["role"] != "tutor":
         raise PermissionError("Only tutors can create lessons")
+    
+    if not helpers.is_valid_datetime(lesson_data.starttime):
+        raise ValueError("start time is in invalid format")
+    
+    if not helpers.is_valid_datetime(lesson_data.endtime):
+        raise ValueError("end time is in invalid format")
 
     delta = lesson_data.end_time - lesson_data.start_time
     duration = int(delta.total_seconds() / 60)
@@ -163,3 +169,5 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
         return lesson_data
     else:
         raise HTTPException(status_code=401, detail="User has invalid role")
+
+    

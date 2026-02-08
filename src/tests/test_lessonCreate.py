@@ -62,6 +62,23 @@ class TestLessonCreate:
         assert res_data["student_id"] is None
         assert res_data["available"] == True
 
+    def test_invalid_token(self, reset_data):
+        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
+        end_time = start_time + timedelta(minutes=60)
+
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {'sdfsdfg'}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+
+        assert res.status_code == 401
+        
+
     def test_unsuccessful_lesson_creation_student(self, reset_data):
         register = client.post(
             "/users/register",
@@ -160,3 +177,61 @@ class TestLessonCreate:
 
         assert res2.status_code == 400 or res2.status_code == 409
         assert "overlaps" in res2.json()["detail"].lower()
+
+    def test_invalid_start_time_values(self, reset_data):
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        data = register.json()
+        user_token = data["token"]
+        start_time = "2026-14-06 08:00:00"
+        end_time = "2026-03-06 09:00:00"
+
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+
+        assert res.status_code == 401
+    
+    def test_invalid_start_time_format(self, reset_data):
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        data = register.json()
+        user_token = data["token"]
+        start_time = "2026-03-06"
+        end_time = "2026-03-06 09:00:00"
+
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+
+        assert res.status_code == 401
