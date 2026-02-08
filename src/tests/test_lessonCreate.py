@@ -177,7 +177,7 @@ class TestLessonCreate:
         assert res2.status_code == 400 or res2.status_code == 409
         assert "overlaps" in res2.json()["detail"].lower()
 
-    def test_invalid_start_time_values(self, reset_data):
+    def test_invalid_time_values(self, reset_data):
         register = client.post(
             "/users/register",
             json={
@@ -206,7 +206,7 @@ class TestLessonCreate:
 
         assert res.status_code == 401
     
-    def test_invalid_start_time_format(self, reset_data):
+    def test_invalid_time_format(self, reset_data):
         register = client.post(
             "/users/register",
             json={
@@ -233,3 +233,129 @@ class TestLessonCreate:
             },
         )
         assert res.status_code == 401
+
+    def test_invalid_time_empty(self, reset_data):
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        data = register.json()
+        user_token = data["token"]
+        start_time = ""
+        end_time = datetime(2026, 1, 6, 9, 0)
+
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
+            json={
+                "start_time": start_time,
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+        assert res.status_code == 401
+
+    def test_successful_lesson_creation_boundary(self, reset_data):
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        data = register.json()
+        user_token = data["token"]
+
+        start_time_1 = datetime(2026, 1, 6, 8, 0)
+        end_time_1 = start_time_1 + timedelta(minutes=60)
+        res1 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
+            json={
+                "start_time": start_time_1.isoformat(),
+                "end_time": end_time_1.isoformat(),
+                "subject": "Math",
+            },
+        )
+        assert res1.status_code == 201
+
+        start_time_2 = datetime(2026, 1, 6, 9, 0)
+        end_time_2 = start_time_2 + timedelta(minutes=60)
+        res2 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
+            json={
+                "start_time": start_time_2.isoformat(),
+                "end_time": end_time_2.isoformat(),
+                "subject": "History",
+            },
+        )
+
+        assert res2.status_code == 201
+
+    def test_same_time_different_tutor(self, reset_data):
+        register1 = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        data1 = register1.json()
+        user_token1 = data1["token"]
+
+        register2 = client.post(
+            "/users/register",
+            json={
+                "first_name": "Sherman",
+                "last_name": "Doe",
+                "email": "hello@example.com",
+                "password": "Password12_",
+                "mobile": "0412345697",
+                "tutor": True,
+            },
+        )
+        data2 = register2.json()
+        user_token2 = data2["token"]
+
+        start_time = datetime(2026, 1, 6, 8, 0)
+        end_time = start_time + timedelta(minutes=60)
+
+        res1 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token1}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+
+        assert res1.status_code == 201
+
+        res2 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token2}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+
+        assert res2.status_code == 201
