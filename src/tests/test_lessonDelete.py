@@ -158,7 +158,7 @@ class TestLessonDelete:
         userToken = data["token"]
 
         deleteRes = client.delete(
-            f"/lessons/{"fAKeID"}",
+            "/lessons/fAKeID",
             headers={"Authorization": f"Bearer {userToken}"}
         )
 
@@ -209,7 +209,7 @@ class TestLessonDelete:
 
         deleteRes = client.delete(
             f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {"aifajoajga"}"}
+            headers={"Authorization": "Bearer aifajoajga"}
         )
 
         assert deleteRes.status_code == 401

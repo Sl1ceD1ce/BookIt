@@ -69,7 +69,7 @@ def find_lesson_info(lesson_id: str) -> dict | None:
 
 def is_valid_datetime(string: str) -> bool:
     try: 
-        datetime.strptime(string, "%Y-%m-%d %H:%M:%S")
+        datetime.fromisoformat(string)
         return True
     except ValueError:
         return False

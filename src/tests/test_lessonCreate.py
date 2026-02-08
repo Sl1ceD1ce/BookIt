@@ -39,7 +39,6 @@ class TestLessonCreate:
         user_token = data["token"]
         start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
         end_time = start_time + timedelta(minutes=60)
-
         res = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
@@ -192,14 +191,14 @@ class TestLessonCreate:
         )
         data = register.json()
         user_token = data["token"]
-        start_time = "2026-14-06 08:00:00"
-        end_time = "2026-03-06 09:00:00"
+        start_time = "2026-14-06T09:00:00"
+        end_time = datetime(2026, 1, 6, 9, 0)
 
         res = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
             json={
-                "start_time": start_time.isoformat(),
+                "start_time": start_time,
                 "end_time": end_time.isoformat(),
                 "subject": "Math",
             },
@@ -221,17 +220,16 @@ class TestLessonCreate:
         )
         data = register.json()
         user_token = data["token"]
-        start_time = "2026-03-06"
-        end_time = "2026-03-06 09:00:00"
+        start_time = "2026-03"
+        end_time = datetime(2026, 1, 6, 9, 0)
 
         res = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
             json={
-                "start_time": start_time.isoformat(),
+                "start_time": start_time,
                 "end_time": end_time.isoformat(),
                 "subject": "Math",
             },
         )
-
         assert res.status_code == 401

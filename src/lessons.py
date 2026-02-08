@@ -19,13 +19,13 @@ def create_lesson(token: str, lesson_data) -> dict:
     if user_data["role"] != "tutor":
         raise PermissionError("Only tutors can create lessons")
     
-    if not helpers.is_valid_datetime(lesson_data.starttime):
+    if not helpers.is_valid_datetime(lesson_data.start_time):
         raise ValueError("start time is in invalid format")
     
-    if not helpers.is_valid_datetime(lesson_data.endtime):
+    if not helpers.is_valid_datetime(lesson_data.end_time):
         raise ValueError("end time is in invalid format")
 
-    delta = lesson_data.end_time - lesson_data.start_time
+    delta = datetime.fromisoformat(lesson_data.end_time) - datetime.fromisoformat(lesson_data.start_time)
     duration = int(delta.total_seconds() / 60)
 
     if duration <= 0:
@@ -40,15 +40,15 @@ def create_lesson(token: str, lesson_data) -> dict:
         existing_start = datetime.fromisoformat(lesson["start_time"])
         existing_end = datetime.fromisoformat(lesson["end_time"])
 
-        if (lesson_data.start_time < existing_end and existing_start < lesson_data.end_time):
+        if (datetime.fromisoformat(lesson_data.start_time) < existing_end and existing_start < datetime.fromisoformat(lesson_data.end_time)):
             raise HTTPException(status_code=400, detail="Lesson overlaps with existing lesson")
     
     lesson_id = helpers.generate_id()
 
     lesson = {
         "lesson_id": lesson_id,
-        "start_time": lesson_data.start_time.isoformat(),
-        "end_time": lesson_data.end_time.isoformat(),
+        "start_time": lesson_data.start_time,
+        "end_time": lesson_data.end_time,
         "duration": duration,
         "subject": lesson_data.subject,
         "tutor_id": user_data["id"],

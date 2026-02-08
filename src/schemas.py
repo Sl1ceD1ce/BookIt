@@ -57,15 +57,15 @@ class UserLoginResponse(BaseModel):
 
 
 class LessonCreate(BaseModel):
-    start_time: datetime
-    end_time: datetime
+    start_time: str
+    end_time: str
     subject: str
 
 
 class LessonResponse(BaseModel):
     lesson_id: str
-    start_time: datetime
-    end_time: datetime
+    start_time: str
+    end_time: str
     duration: int
     subject: str
     tutor_id: str
