@@ -157,7 +157,7 @@ class TestLessonUpdate:
 
         patchRes = client.patch(
             f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {"fakeToken123"}"},
+            headers={"Authorization": "Bearer {fakeToken123}"},
             json={
                 "start_time": newStart.isoformat(),
                 "end_time": newEnd.isoformat(),
