@@ -62,6 +62,19 @@ async def logout_user_route(token: str = Depends(oauth2_scheme)):
         return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    
+@app.delete("/users", status_code=200)
+async def logout_user_route(token: str = Depends(oauth2_scheme)):
+    """Delete a user"""
+    try:
+        res = auth.delete_user(token)
+        ds.save_data()
+
+        return res
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
 
 @app.get("/users", status_code=200)

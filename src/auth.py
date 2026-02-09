@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 import helpers
 import dataStore as ds
+from fastapi import HTTPException
+
 
 def register_user(user_data) -> dict:
     """Register a new user. Accepts Pydantic model directly."""
@@ -96,17 +98,49 @@ def get_users(token: str) -> dict:
 
 def logout_user(token: str) -> dict:
     """Invalidate a token by adding it to blacklist"""
-    try:
-        decoded = helpers.decode_jwt_token(token)
-        
-        # Add token to blacklist
-        data = ds.get_data()
-        data["invalidated_tokens"].append({
-            "token": token,
-            "user_id": decoded["user_id"],
-            "invalidated_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        return {"message": "Logged out successfully"}
-    except ValueError as e:
-        raise ValueError(f"Cannot logout: {str(e)}")
+    if helpers.is_token_blacklisted(token):
+        raise ValueError("token is invalid")
+
+    # Invalidate the token
+    helpers.invalidate_token(token)
+
+    return {"message": "Logged out successfully"}
+   
+
+
+def delete_user(token: str) -> dict:
+    """Deletes a user from the system including the associated lessons if the user is a tutor"""
+    if helpers.is_token_blacklisted(token):
+        raise HTTPException(status_code=401, detail="Token is invalid")
+
+    decoded_token = helpers.decode_jwt_token(token)
+    user_data = helpers.find_user_info(decoded_token)
+
+    if not user_data:
+        raise HTTPException(status_code=401, detail="User does not exist")
+
+    # If user is a tutor, delete all their lessons
+    if user_data["role"] == "tutor":
+        lessons = ds.get_data()["lessons"]
+        ds.get_data()["lessons"] = [
+            lesson for lesson in lessons if lesson["tutor_id"] != user_data["id"]
+        ]
+    else:  # Student
+        # Remove student from all lessons they're enrolled in
+        for lesson in ds.get_data()["lessons"]:
+            if (
+                lesson.get("student_id") == user_data.id
+                or lesson.get("student_email") == user_data.email
+            ):
+                lesson["student_id"] = None
+                lesson["student_email"] = None
+                lesson["status"] = "Available"
+
+    # Remove the user from the datastore
+    users = ds.get_data()["users"]
+    ds.get_data()["users"] = [user for user in users if user["id"] != user_data["id"]]
+
+    # Invalidate the token
+    helpers.invalidate_token(token)
+
+    return {"message": "User deleted successfully"}
