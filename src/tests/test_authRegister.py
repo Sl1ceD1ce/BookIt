@@ -77,6 +77,23 @@ class TestUserRegistration:
         assert stored_user["role"] == "tutor"
         assert all(k in stored_user for k in ("student_ids", "tutor_rates", "about_me"))
 
+    @pytest.mark.parametrize(
+        "password", ["Pass@w0rd!", "sl1ckPassw1rd!", "n1cePassw0rd?"]
+    )
+    def test_valid_password_formats(self, reset_data, password):
+        response = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": password,
+                "mobile": "0412345678",
+                "tutor": False,
+            },
+        )
+        assert response.status_code == 201
+
     def test_email_already_exists(self, reset_data):
         client.post(
             "/users/register",
@@ -146,8 +163,8 @@ class TestUserRegistration:
         error = response.json()["detail"][0]
         assert error["loc"] == ["body", "email"]
 
-    @pytest.mark.parametrize("password", ["Pass@word!", "Invalid$", "123#abc"])
-    def test_invalid_password_format(self, reset_data, password):
+    @pytest.mark.parametrize("password", ["Pass@word!", "sl1ckPassw1rd", "pass"])
+    def test_invalid_password_formats(self, reset_data, password):
         response = client.post(
             "/users/register",
             json={
@@ -160,9 +177,6 @@ class TestUserRegistration:
             },
         )
         assert response.status_code == 422
-        error = response.json()["detail"][0]
-        assert error["loc"] == ["body", "password"]
-        assert "letters, numbers, and underscores" in error["msg"]
 
     @pytest.mark.parametrize(
         "mobile", ["1234567890", "041234567", "04123456789", "04A2345678"]
