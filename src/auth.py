@@ -99,6 +99,12 @@ def logout_user(token: str) -> dict:
     try:
         decoded = helpers.decode_jwt_token(token)
         
+        data = ds.get_data()
+
+        # Check if token already invalidated
+        if any(t["token"] == token for t in data["invalidated_tokens"]):
+            raise ValueError("Token already invalidated")
+
         # Add token to blacklist
         data = ds.get_data()
         data["invalidated_tokens"].append({
