@@ -8,7 +8,7 @@ class UserRegister(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=30)
     last_name: str = Field(..., min_length=1, max_length=30)
     email: EmailStr = Field(..., max_length=50)
-    password: str = Field(..., min_length=1, max_length=30)
+    password: str = Field(..., min_length=8, max_length=30)
     mobile: str
     tutor: bool
 
@@ -17,15 +17,18 @@ class UserRegister(BaseModel):
     def validate_name(cls, v):
         if not v.strip():
             raise ValueError("name cannot be empty or just whitespace")
+        if not re.match(r"^[A-Za-z\- ]+$", v):
+            raise ValueError("Name can only alphabetical characters and hyphens")
+
         return v.strip()
 
     @field_validator("password")
     @classmethod
     def validate_password(cls, v):
-        if not re.match(r"^[A-Za-z0-9_]+$", v):
-            raise ValueError(
-                "password can only contain letters, numbers, and underscores"
-            )
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Password must contain numbers")
+        if not re.search(r"[^a-zA-Z0-9]", v):
+            raise ValueError("Password must contain non-alphanumeric characters")
         return v
 
     @field_validator("mobile")

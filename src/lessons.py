@@ -176,7 +176,7 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
         raise HTTPException(status_code=401, detail="User has invalid role")
 
 
-def delete_lesson(token: str, lesson_id: str) -> str:
+def delete_lesson(token: str, lesson_id: str) -> dict:
     if helpers.is_token_blacklisted(token):
         raise HTTPException(status_code=401, detail="Token is invalid")
 

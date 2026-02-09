@@ -5,6 +5,7 @@ from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 import uuid
 from fastapi import HTTPException
 
+
 def create_jwt_token(user_id: str) -> str:
     expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXP_HOURS)
     payload = {"user_id": user_id, "exp": expiration}
@@ -15,7 +16,7 @@ def create_jwt_token(user_id: str) -> str:
 def decode_jwt_token(token: str) -> dict:
     """
     Docstring for decode_jwt_token
-    
+
     :param token: A JWT token
     :type token: str
     :return: A dictionary containing user_id and exp (expiration date)
@@ -28,9 +29,11 @@ def decode_jwt_token(token: str) -> dict:
     except jwt.InvalidTokenError:
         raise ValueError("Invalid token")
 
+
 def generate_id() -> str:
     """Generates a random id using uuid4"""
     return str(uuid.uuid4())
+
 
 def email_exists(email: str) -> bool:
     data = ds.get_data()
@@ -39,12 +42,14 @@ def email_exists(email: str) -> bool:
             return True
     return False
 
+
 def mobile_exists(mobile: str) -> bool:
     data = ds.get_data()
     for user in data["users"]:
         if user["mobile"] == mobile:
             return True
     return False
+
 
 def find_user_info(decoded_token: dict) -> dict | None:
     data = ds.get_data()
@@ -53,6 +58,7 @@ def find_user_info(decoded_token: dict) -> dict | None:
             return user
     return None
 
+
 def is_token_blacklisted(token: str) -> bool:
     """Check if token has been invalidated"""
     data = ds.get_data()
@@ -60,6 +66,7 @@ def is_token_blacklisted(token: str) -> bool:
         if entry["token"] == token:
             return True
     return False
+
 
 def find_lesson_info(lesson_id: str) -> dict | None:
     data = ds.get_data()
@@ -94,3 +101,15 @@ def check_lesson_time(user_data, lesson_data, lesson_id):
 
         if (datetime.fromisoformat(lesson_data["start_time"]) < existing_end and existing_start < datetime.fromisoformat(lesson_data["end_time"])):
             raise HTTPException(status_code=400, detail="Lesson overlaps with existing lesson")
+
+def invalidate_token(token: str) -> None:
+    data = ds.get_data()
+
+    decoded = decode_jwt_token(token)
+    data["invalidated_tokens"].append(
+        {
+            "token": token,
+            "user_id": decoded["user_id"],
+            "invalidated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
