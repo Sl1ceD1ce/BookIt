@@ -10,7 +10,8 @@ client = TestClient(app)
 
 TEST_DB = "data.json"
 
-
+default_start = datetime.now() + timedelta(minutes=60)
+default_end = default_start + timedelta(minutes=60)
 @pytest.fixture
 def reset_data():
     """Reset datastore before each test"""
@@ -37,8 +38,8 @@ class TestLessonCreate:
         )
         data = register.json()
         user_token = data["token"]
-        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
-        end_time = start_time + timedelta(minutes=60)
+        start_time = default_start  # 2026-01-06 08:00:00
+        end_time = default_end
         res = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
@@ -58,12 +59,12 @@ class TestLessonCreate:
         assert res_data["duration"] == 60
         assert res_data["subject"] == "Math"
         assert res_data["tutor_id"] == decode_jwt_token(user_token)["user_id"]
-        assert res_data["student_id"] is None
+        assert res_data["assigned_student_id"] is None
         assert res_data["available"] == True
 
     def test_invalid_token(self, reset_data):
-        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
-        end_time = start_time + timedelta(minutes=60)
+        start_time = default_start  # 2026-01-06 08:00:00
+        end_time = default_end
 
         res = client.post(
             "/lessons/",
@@ -92,8 +93,8 @@ class TestLessonCreate:
         )
         data = register.json()
         user_token = data["token"]
-        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
-        end_time = start_time + timedelta(minutes=60)
+        start_time = default_start  # 2026-01-06 08:00:00
+        end_time = default_end
         res = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
@@ -120,7 +121,7 @@ class TestLessonCreate:
         )
         data = register.json()
         user_token = data["token"]
-        start_time = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
+        start_time = default_start  # 2026-01-06 08:00:00
         end_time = start_time + timedelta(minutes=-20)
         res = client.post(
             "/lessons/",
@@ -149,8 +150,8 @@ class TestLessonCreate:
         data = register.json()
         user_token = data["token"]
 
-        start_time_1 = datetime(2026, 1, 6, 8, 0)
-        end_time_1 = start_time_1 + timedelta(minutes=60)
+        start_time_1 = default_start
+        end_time_1 = default_end
         res1 = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
@@ -162,7 +163,7 @@ class TestLessonCreate:
         )
         assert res1.status_code == 201
 
-        start_time_2 = datetime(2026, 1, 6, 8, 30)
+        start_time_2 = default_start + timedelta(minutes=30)
         end_time_2 = start_time_2 + timedelta(minutes=60)
         res2 = client.post(
             "/lessons/",
@@ -277,8 +278,8 @@ class TestLessonCreate:
         data = register.json()
         user_token = data["token"]
 
-        start_time_1 = datetime(2026, 1, 6, 8, 0)
-        end_time_1 = start_time_1 + timedelta(minutes=60)
+        start_time_1 = default_start
+        end_time_1 = default_end
         res1 = client.post(
             "/lessons/",
             headers={"Authorization": f"Bearer {user_token}"},
@@ -290,7 +291,7 @@ class TestLessonCreate:
         )
         assert res1.status_code == 201
 
-        start_time_2 = datetime(2026, 1, 6, 9, 0)
+        start_time_2 = default_start + timedelta(minutes=60)
         end_time_2 = start_time_2 + timedelta(minutes=60)
         res2 = client.post(
             "/lessons/",
@@ -333,8 +334,8 @@ class TestLessonCreate:
         data2 = register2.json()
         user_token2 = data2["token"]
 
-        start_time = datetime(2026, 1, 6, 8, 0)
-        end_time = start_time + timedelta(minutes=60)
+        start_time = default_start
+        end_time = default_end
 
         res1 = client.post(
             "/lessons/",
@@ -359,3 +360,31 @@ class TestLessonCreate:
         )
 
         assert res2.status_code == 201
+    
+    def test_unsuccessful_lesson_creation_past(self, reset_data):
+        register = client.post(
+            "/users/register",
+            json={
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        data = register.json()
+        user_token = data["token"]
+        start_time = datetime.now() - timedelta(minutes=30)  # 2026-01-06 08:00:00
+        end_time = start_time + timedelta(minutes=60)
+        res = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {user_token}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+        assert res.status_code == 400
+        

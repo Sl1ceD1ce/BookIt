@@ -69,7 +69,7 @@ class LessonResponse(BaseModel):
     duration: int
     subject: str
     tutor_id: str
-    student_id: Optional[str] = None
+    assigned_student_id: Optional[str] = None
     available: bool
 
 
@@ -77,5 +77,5 @@ class LessonUpdate(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     subject: Optional[str] = None
-    student_id: Optional[str] = None
+    assigned_student_id: Optional[str] = None
     available: Optional[bool] = None

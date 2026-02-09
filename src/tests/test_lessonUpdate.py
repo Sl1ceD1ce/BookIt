@@ -11,6 +11,8 @@ client = TestClient(app)
 
 TEST_DB = "data.json"
 
+default_start = datetime.now() + timedelta(minutes=60)
+default_end = default_start + timedelta(minutes=60)
 
 @pytest.fixture
 def reset_data():
@@ -40,9 +42,9 @@ sampleStudent = {
     "tutor": False,
 }
 
-startTime = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
+startTime = default_start  # 2026-01-06 08:00:00
 endTime = startTime + timedelta(minutes=60)
-newStart = datetime(2026, 1, 7, 8, 0)  # 2026-01-06 08:00:00
+newStart = default_start + timedelta(days=1)  # 2026-01-06 08:00:00
 newEnd = newStart + timedelta(minutes=60)
 
 sampleLesson = {
@@ -70,7 +72,7 @@ class TestLessonUpdate:
                 "start_time": newStart.isoformat(),
                 "end_time": newEnd.isoformat(),
                 "subject": "Physics",
-                "student_id": None,
+                "assigned_student_id": None,
                 "available": True,
             },
         )
@@ -91,7 +93,7 @@ class TestLessonUpdate:
         assert lessons[0]["start_time"] == newStart.isoformat()
         assert lessons[0]["end_time"] == newEnd.isoformat()
         assert lessons[0]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
-        assert lessons[0]["student_id"] is None
+        assert lessons[0]["assigned_student_id"] is None
         assert lessons[0]["available"] == True
 
     def test_successfulLessonStudentUpdate(self, reset_data):
@@ -102,12 +104,12 @@ class TestLessonUpdate:
         lessonData = lessonJson.json()
 
         assert lessonData["available"] == False
-        assert lessonData["student_id"] == helpers.decode_jwt_token(studentToken)["user_id"]
+        assert lessonData["assigned_student_id"] == helpers.decode_jwt_token(studentToken)["user_id"]
 
         patchRes = client.patch(
             f"/lessons/{lessonData['lesson_id']}",
             headers={"Authorization": f"Bearer {studentToken}"},
-            json={"student_email": None, "available": False},
+            json={"assigned_student_id": None, "available": True},
         )
 
         assert patchRes.status_code == 200
@@ -120,14 +122,22 @@ class TestLessonUpdate:
         assert getRes.status_code == 200
         lessons = getRes.json()
 
+        getRes2 = client.get(
+            "/lessons", headers={"Authorization": f"Bearer {studentToken}"}
+        )
+        assert getRes2.status_code == 200
+        lessons2 = getRes2.json()
+
+        assert len(lessons2) == 0
+
         assert len(lessons) == 1
         assert lessons[0]["lesson_id"] == lessonData["lesson_id"]
         assert lessons[0]["subject"] == "Math"
         assert lessons[0]["start_time"] == startTime.isoformat()
         assert lessons[0]["end_time"] == endTime.isoformat()
         assert lessons[0]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
-        assert lessons[0]["student_id"] is None
-        assert lessons[0]["available"] == False
+        assert lessons[0]["assigned_student_id"] is None
+        assert lessons[0]["available"] == True
 
     def test_wrongRole(self, reset_data):
         tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
@@ -185,3 +195,84 @@ class TestLessonUpdate:
         )
 
         assert patchRes.status_code == 404
+
+    def test_updateDoesntChangeOtherLessons(self, reset_data):
+        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
+            client, sampleTutor, sampleLesson, sampleStudent
+        )
+
+        lesson2 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {tutorToken}"},
+            json={
+                "start_time": newStart.isoformat(),
+                "end_time": newEnd.isoformat(),
+                "subject": "English",
+            },
+        )
+
+        lessonData = lessonJson.json()
+        lessonData2 = lesson2.json()
+
+        patchRes = client.patch(
+            f"/lessons/{lessonData['lesson_id']}",
+            headers={"Authorization": f"Bearer {tutorToken}"},
+            json={
+                "start_time": (startTime + timedelta(days=2)).isoformat(),
+                "end_time": (endTime + timedelta(days=2)).isoformat(),
+                "subject": "Physics",
+                "assigned_student_id": None,
+                "available": True,
+            },
+        )
+
+        assert patchRes.status_code == 200
+        patchRes = patchRes.json()
+
+        getRes = client.get(
+            "/lessons", headers={"Authorization": f"Bearer {tutorToken}"}
+        )
+
+        assert getRes.status_code == 200
+        lessons = getRes.json()
+
+        assert len(lessons) == 2
+        assert lessons[1]["lesson_id"] == lessonData2["lesson_id"]
+        assert lessons[1]["subject"] == "English"
+        assert lessons[1]["start_time"] == newStart.isoformat()
+        assert lessons[1]["end_time"] == newEnd.isoformat()
+        assert lessons[1]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
+        assert lessons[1]["assigned_student_id"] is None
+        assert lessons[1]["available"] == True
+    
+    def test_unsuccessfulUpdateOverlap(self, reset_data):
+        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
+            client, sampleTutor, sampleLesson, sampleStudent
+        )
+
+        lesson2 = client.post(
+            "/lessons/",
+            headers={"Authorization": f"Bearer {tutorToken}"},
+            json={
+                "start_time": newStart.isoformat(),
+                "end_time": newEnd.isoformat(),
+                "subject": "English",
+            },
+        )
+
+        lessonData = lessonJson.json()
+        lessonData2 = lesson2.json()
+
+        patchRes = client.patch(
+            f"/lessons/{lessonData['lesson_id']}",
+            headers={"Authorization": f"Bearer {tutorToken}"},
+            json={
+                "start_time": (newStart + timedelta(minutes=30)).isoformat(),
+                "end_time": newEnd.isoformat(),
+                "subject": "Physics",
+                "assigned_student_id": None,
+                "available": True,
+            },
+        )
+
+        assert patchRes.status_code == 400
