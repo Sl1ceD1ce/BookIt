@@ -30,6 +30,15 @@ sampleTutor = {
     "tutor": True,
 }
 
+sampleTutor2 = {
+    "first_name": "Richard",
+    "last_name": "Zhang",
+    "email": "richardzhang@gmail.com",
+    "password": "LigmaBalls123_",
+    "mobile": "0419491812",
+    "tutor": True,
+}
+
 sampleStudent = {
     "first_name": "Jimmy",
     "last_name": "Butler",
@@ -209,7 +218,7 @@ class TestLessonDelete:
 
         deleteRes = client.delete(
             f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {"aifajoajga"}"}
+            headers={"Authorization": "Bearer {aifajoajga}"}
         )
 
         assert deleteRes.status_code == 401
@@ -233,4 +242,20 @@ class TestLessonDelete:
 
         assert deleteRes.status_code == 401
 
-    "def test_tutorDoesNotOwnLesson(self, reset_data)"
+    def test_tutorDoesNotOwnLesson(self, reset_data):
+        tutorToken, lessonJson = helper_testFunctions.standardTutorLesson(
+            client, sampleTutor, sampleLesson
+        )
+
+        lessonData = lessonJson.json()
+
+        tutor2Res = client.post("/users/register", json=sampleTutor2)
+        tutorToken2 = tutor2Res.json()["token"]
+
+        deleteRes = client.delete(
+            f"/lessons/{lessonData['lesson_id']}",
+            headers={"Authorization": f"Bearer {tutorToken2}"}
+        )
+
+        assert deleteRes.status_code == 403
+

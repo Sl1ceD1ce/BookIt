@@ -75,9 +75,6 @@ class TestLessonUpdate:
             },
         )
 
-        if patchRes.status_code != 200:
-            print(patchRes.json())
-
         assert patchRes.status_code == 200
         patchRes = patchRes.json()
 
@@ -160,7 +157,7 @@ class TestLessonUpdate:
 
         patchRes = client.patch(
             f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {"fakeToken123"}"},
+            headers={"Authorization": "Bearer {fakeToken123}"},
             json={
                 "start_time": newStart.isoformat(),
                 "end_time": newEnd.isoformat(),
@@ -178,7 +175,7 @@ class TestLessonUpdate:
         lessonData = lessonJson.json()
 
         patchRes = client.patch(
-            f"/lessons/{"1394819509158"}",
+            "/lessons/{1394819509158}",
             headers={"Authorization": f"Bearer {tutorToken}"},
             json={
                 "start_time": newStart.isoformat(),

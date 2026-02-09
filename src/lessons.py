@@ -183,7 +183,7 @@ def delete_lesson(token: str, lesson_id: str) -> str:
         raise HTTPException(status_code=403, detail="Only tutors can modify this")
 
     if user_data["id"] != lesson_data["tutor_id"]:
-         raise HTTPException(status_code=403, detail="User does not own lesson")
+        raise HTTPException(status_code=403, detail="User does not own lesson")
     
     helpers.get_lessons().remove(lesson_data)
 
