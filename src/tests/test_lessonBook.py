@@ -5,6 +5,7 @@ import dataStore as ds
 from server import app
 from fastapi.testclient import TestClient
 from helpers import decode_jwt_token
+import helpers
 
 
 client = TestClient(app)
@@ -21,6 +22,12 @@ def reset_data():
     if os.path.exists(TEST_DB):
         os.remove(TEST_DB)
 
+# Test cases:
+# Successful booking
+# Unsuccessful booking with tutor
+# Unsuccessful booking due to non-existent lesson
+# Unsuccessful booking due to already being booked
+# Unsuccessful booking due to non-existent student
 
 class TestLessonBook:
 
@@ -84,7 +91,7 @@ class TestLessonBook:
         assert result["duration"] == 60
         assert result["subject"] == "Physics"
         assert result["tutor_id"] == decode_jwt_token(tutor_token)["user_id"]
-        assert result["student_id"] == decode_jwt_token(student_token)["user_id"]
+        assert result["assigned_student_id"] == decode_jwt_token(student_token)["user_id"]
         assert result["available"] == False
 
     def test_booking_with_tutor_forbidden(self, reset_data):
@@ -203,3 +210,94 @@ class TestLessonBook:
         )
         assert book_res2.status_code == 409
         assert "Lesson is already booked" in book_res2.json()["detail"]
+    
+    def test_booking_with_malformed_token(self, reset_data):
+        # Register tutor
+        tutor_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Jane",
+                "last_name": "Tutor",
+                "email": "jane@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        tutor_token = tutor_res.json()["token"]
+
+        # Tutor creates a lesson
+        start_time = datetime.now() + timedelta(hours=1)
+        end_time = start_time + timedelta(minutes=60)
+        lesson_res = client.post(
+            "/lessons",
+            headers={"Authorization": f"Bearer {tutor_token}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Math",
+            },
+        )
+        lesson = lesson_res.json()
+
+        book_res = client.post(
+            f"/lessons/{lesson['lesson_id']}/book",
+            headers={"Authorization": "Bearer dsafasdfkj"},
+        )
+        assert book_res.status_code == 401
+
+    def test_unsuccessful_booking_in_past(self, reset_data):
+        # Register tutor
+        tutor_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Jane",
+                "last_name": "Tutor",
+                "email": "jane@example.com",
+                "password": "Password123_",
+                "mobile": "0412345678",
+                "tutor": True,
+            },
+        )
+        tutor_token = tutor_res.json()["token"]
+
+        # Register student
+        student_res = client.post(
+            "/users/register",
+            json={
+                "first_name": "Tom",
+                "last_name": "Student",
+                "email": "tom@example.com",
+                "password": "Password123_",
+                "mobile": "0498765432",
+                "tutor": False,
+            },
+        )
+        student_token = student_res.json()["token"]
+
+        # Tutor creates a lesson
+        start_time = datetime.now() + timedelta(hours=1)
+        end_time = start_time + timedelta(minutes=60)
+        lesson_res = client.post(
+            "/lessons",
+            headers={"Authorization": f"Bearer {tutor_token}"},
+            json={
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "subject": "Physics",
+            },
+        )
+        assert lesson_res.status_code == 201
+        lesson = lesson_res.json()
+        
+        lesson_info = helpers.find_lesson_info(lesson['lesson_id'])
+        lesson_info["start_time"] = datetime.now() - timedelta(hours=1)
+        # Student books the lesson
+        book_url = f"/lessons/{lesson['lesson_id']}/book"
+        print(f"Booking URL: {book_url}")
+
+        book_res = client.post(
+            book_url, headers={"Authorization": f"Bearer {student_token}"}
+        )
+
+        assert book_res.status_code == 400

@@ -3,6 +3,7 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 import uuid
+from fastapi import HTTPException
 
 
 def create_jwt_token(user_id: str) -> str:
@@ -74,11 +75,32 @@ def find_lesson_info(lesson_id: str) -> dict | None:
             return lesson
     return None
 
-
+def is_valid_datetime(string: str) -> bool:
+    try: 
+        datetime.fromisoformat(string)
+        return True
+    except ValueError:
+        return False
+    
 def get_lessons() -> list:
     data = ds.get_data()
     return data["lessons"]
 
+def check_lesson_time(user_data, lesson_data, lesson_id):
+    existing_lessons = []
+    for lesson in ds.get_data()["lessons"]:
+        if lesson["tutor_id"] == user_data["id"]:
+            existing_lessons.append(lesson)
+
+    for lesson in existing_lessons:
+        if lesson['lesson_id'] == lesson_id:
+            continue
+
+        existing_start = datetime.fromisoformat(lesson["start_time"])
+        existing_end = datetime.fromisoformat(lesson["end_time"])
+
+        if (datetime.fromisoformat(lesson_data["start_time"]) < existing_end and existing_start < datetime.fromisoformat(lesson_data["end_time"])):
+            raise HTTPException(status_code=400, detail="Lesson overlaps with existing lesson")
 
 def invalidate_token(token: str) -> None:
     data = ds.get_data()

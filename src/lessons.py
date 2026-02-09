@@ -18,31 +18,35 @@ def create_lesson(token: str, lesson_data) -> dict:
 
     if user_data["role"] != "tutor":
         raise PermissionError("Only tutors can create lessons")
+    
+    if not helpers.is_valid_datetime(lesson_data.start_time):
+        raise ValueError("start time is in invalid format")
+    
+    if not helpers.is_valid_datetime(lesson_data.end_time):
+        raise ValueError("end time is in invalid format")
 
-    delta = lesson_data.end_time - lesson_data.start_time
+    delta = datetime.fromisoformat(lesson_data.end_time) - datetime.fromisoformat(lesson_data.start_time)
     duration = int(delta.total_seconds() / 60)
 
+    if datetime.fromisoformat(lesson_data.start_time) < datetime.now():
+        raise HTTPException(status_code=400, detail="Lesson cannot start in the past")
+    
     if duration <= 0:
         raise HTTPException(status_code=400, detail="Invalid lesson duration")
 
-    existing_lessons = []
-    for lesson in ds.get_data()["lessons"]:
-        if lesson["tutor_id"] == user_data["id"]:
-            existing_lessons.append(lesson)
-
-    for lesson in existing_lessons:
-        existing_start = datetime.fromisoformat(lesson["start_time"])
-        existing_end = datetime.fromisoformat(lesson["end_time"])
-
-        if (lesson_data.start_time < existing_end and existing_start < lesson_data.end_time):
-            raise HTTPException(status_code=400, detail="Lesson overlaps with existing lesson")
+    lesson_data_dict = {
+        "start_time": lesson_data.start_time,
+        "end_time": lesson_data.end_time,
+        "subject": lesson_data.subject
+    }
     
     lesson_id = helpers.generate_id()
+    helpers.check_lesson_time(user_data, lesson_data_dict, lesson_id)
 
     lesson = {
         "lesson_id": lesson_id,
-        "start_time": lesson_data.start_time.isoformat(),
-        "end_time": lesson_data.end_time.isoformat(),
+        "start_time": lesson_data.start_time,
+        "end_time": lesson_data.end_time,
         "duration": duration,
         "subject": lesson_data.subject,
         "tutor_id": user_data["id"],
@@ -71,7 +75,7 @@ def get_user_lessons(token: str) -> list:
     # Filter lessons where the user is tutor or student
     lessons = []
     for lesson in ds.get_data()["lessons"]:
-        if lesson["tutor_id"] == user_id or lesson["student_id"] == user_id:
+        if lesson["tutor_id"] == user_id or lesson["assigned_student_id"] == user_id:
             lessons.append(
                 {
                     "lesson_id": lesson["lesson_id"],
@@ -80,7 +84,7 @@ def get_user_lessons(token: str) -> list:
                     "duration": lesson["duration"],
                     "subject": lesson["subject"],
                     "tutor_id": lesson["tutor_id"],
-                    "student_id": lesson.get("student_id"),
+                    "assigned_student_id": lesson.get("assigned_student_id"),
                     "available": lesson["available"],
                 }
             )
@@ -109,8 +113,11 @@ def book_lesson(token: str, lesson_id: str) -> dict:
     if lesson_data["available"] == False:
         raise HTTPException(status_code=409, detail="Lesson is already booked")
 
-    lesson_data["student_id"] = user_data["id"]
+    lesson_data["assigned_student_id"] = user_data["id"]
     lesson_data["available"] = False
+
+    if datetime.fromisoformat(str(lesson_data["start_time"])) < datetime.now():
+        raise HTTPException(status_code=400, detail="Lesson in the past cannot be booked")
 
     return {
         "lesson_id": lesson_data["lesson_id"],
@@ -119,7 +126,7 @@ def book_lesson(token: str, lesson_id: str) -> dict:
         "duration": lesson_data["duration"],
         "subject": lesson_data["subject"],
         "tutor_id": lesson_data["tutor_id"],
-        "student_id": lesson_data.get("student_id"),
+        "assigned_student_id": lesson_data.get("assigned_student_id"),
         "available": lesson_data["available"],
     }
 
@@ -145,20 +152,24 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
         # TODO: After transferring lessons to be id based instead of email based
         # Make it such that we validate that the student has this tutor as a tutor
 
-        lesson_data["student_id"] = update_data.student_id
+        lesson_data["assigned_student_id"] = update_data.assigned_student_id
         lesson_data["available"] = update_data.available
 
         return lesson_data
     elif user_data["role"] == "tutor":
+        
         if update_data.start_time is not None:
             lesson_data["start_time"] = update_data.start_time.isoformat()
         if update_data.end_time is not None:
             lesson_data["end_time"] = update_data.end_time.isoformat()
         if update_data.subject is not None:
             lesson_data["subject"] = update_data.subject
+        
         # Always update student_email and status (even if None)
-        lesson_data["student_id"] = update_data.student_id
+        lesson_data["assigned_student_id"] = update_data.assigned_student_id
         lesson_data["available"] = update_data.available
+
+        helpers.check_lesson_time(user_data, lesson_data, lesson_id)
 
         return lesson_data
     else:
