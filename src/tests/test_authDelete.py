@@ -56,17 +56,10 @@ sampleStudent2 = {
     "tutor": False,
 }
 
-startTime = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
-endTime = startTime + timedelta(minutes=60)
-newStart = datetime(2026, 1, 7, 8, 0)  # 2026-01-06 08:00:00
+startTime = datetime.now() + timedelta(minutes=60)
+endTime  = startTime + timedelta(minutes=60)
+newStart = startTime + timedelta(days=1)
 newEnd = newStart + timedelta(minutes=60)
-
-sampleLesson = {
-    "start_time": startTime.isoformat(),
-    "end_time": endTime.isoformat(),
-    "subject": "Math",
-}
-
 
 class TestAuthDelete:
     def test_successfulDeleteTutor(self, reset_data):
