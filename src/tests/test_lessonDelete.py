@@ -30,6 +30,15 @@ sampleTutor = {
     "tutor": True,
 }
 
+sampleTutor2 = {
+    "first_name": "Richard",
+    "last_name": "Zhang",
+    "email": "richardzhang@gmail.com",
+    "password": "LigmaBalls123_",
+    "mobile": "0419491812",
+    "tutor": True,
+}
+
 sampleStudent = {
     "first_name": "Jimmy",
     "last_name": "Butler",
@@ -39,11 +48,11 @@ sampleStudent = {
     "tutor": False,
 }
 
-startTime = datetime(2026, 1, 6, 8, 0)  # 2026-01-06 08:00:00
+startTime = datetime.now() + timedelta(minutes=60)  # 2026-01-06 08:00:00
 endTime = startTime + timedelta(minutes=60)
-startTime2 = datetime(2026, 1, 7, 8, 0)  # 2026-01-07 08:00:00
+startTime2 = startTime + timedelta(days=1)  # 2026-01-07 08:00:00
 endTime2 = startTime2 + timedelta(minutes=60)
-startTime3 = datetime(2026, 1, 7, 10, 0)  # 2026-01-07 10:00:00
+startTime3 = startTime + timedelta(hours=2)  # 2026-01-07 10:00:00
 endTime3 = startTime3 + timedelta(minutes=60)
 
 sampleLesson = {
@@ -158,7 +167,7 @@ class TestLessonDelete:
         userToken = data["token"]
 
         deleteRes = client.delete(
-            f"/lessons/{"fAKeID"}",
+            "/lessons/fAKeID",
             headers={"Authorization": f"Bearer {userToken}"}
         )
 
@@ -194,7 +203,7 @@ class TestLessonDelete:
         assert tutorLessonRes[0]["start_time"] == startTime.isoformat()
         assert tutorLessonRes[0]["end_time"] == endTime.isoformat()
         assert tutorLessonRes[0]["tutor_id"] == decode_jwt_token(tutorToken)["user_id"]
-        assert tutorLessonRes[0]["student_id"] == decode_jwt_token(studentToken)["user_id"]
+        assert tutorLessonRes[0]["assigned_student_id"] == decode_jwt_token(studentToken)["user_id"]
         assert tutorLessonRes[0]["available"] == False
 
         assert tutorLessonRes == studentLessonRes
@@ -209,7 +218,7 @@ class TestLessonDelete:
 
         deleteRes = client.delete(
             f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {"aifajoajga"}"}
+            headers={"Authorization": "Bearer aifajoajga"}
         )
 
         assert deleteRes.status_code == 401
@@ -233,4 +242,20 @@ class TestLessonDelete:
 
         assert deleteRes.status_code == 401
 
-    "def test_tutorDoesNotOwnLesson(self, reset_data)"
+    def test_tutorDoesNotOwnLesson(self, reset_data):
+        tutorToken, lessonJson = helper_testFunctions.standardTutorLesson(
+            client, sampleTutor, sampleLesson
+        )
+
+        lessonData = lessonJson.json()
+
+        tutor2Res = client.post("/users/register", json=sampleTutor2)
+        tutorToken2 = tutor2Res.json()["token"]
+
+        deleteRes = client.delete(
+            f"/lessons/{lessonData['lesson_id']}",
+            headers={"Authorization": f"Bearer {tutorToken2}"}
+        )
+
+        assert deleteRes.status_code == 403
+
