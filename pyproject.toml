@@ -6,6 +6,8 @@ dependencies = [
     "PyJWT[crypto]",
     "requests",
     "pytest", 
+    "psycopg2-binary",
+    "sqlalchemy",
 ]
 requires-python = ">=3.8"
 
