@@ -2,11 +2,11 @@ from datetime import datetime, timezone
 import helpers
 import dataStore as ds
 from fastapi import HTTPException
+from schemas import UserRegister, UserLogin, LessonResponse
 
 
-def register_user(user_data) -> dict:
+def register_user(user_data: UserRegister) -> dict:
     """Register a new user. Accepts Pydantic model directly."""
-
     # Check uniqueness
     if helpers.email_exists(user_data.email):
         raise ValueError("email already registered")
@@ -61,7 +61,7 @@ def register_user(user_data) -> dict:
     }
 
 
-def login_user(login_data) -> dict:
+def login_user(login_data: UserLogin) -> dict:
     data = ds.get_data()
 
     user = None
@@ -105,7 +105,6 @@ def logout_user(token: str) -> dict:
     helpers.invalidate_token(token)
 
     return {"message": "Logged out successfully"}
-   
 
 
 def delete_user(token: str) -> dict:
@@ -129,8 +128,8 @@ def delete_user(token: str) -> dict:
         # Remove student from all lessons they're enrolled in
         for lesson in ds.get_data()["lessons"]:
             if (
-                lesson.get("student_id") == user_data.id
-                or lesson.get("student_email") == user_data.email
+                lesson.get("student_id") == user_data["id"]
+                or lesson.get("student_email") == user_data["email"]
             ):
                 lesson["student_id"] = None
                 lesson["student_email"] = None
