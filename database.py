@@ -1,21 +1,27 @@
+"""Database configuration and ORM models for the Bookit application."""
+
 import os
-from sqlalchemy import create_engine, Column, String, Boolean, Integer
+from typing import Optional
+
+from sqlalchemy import create_engine, String, Boolean, Integer
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Mapped, mapped_column
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://bookit:bookit_pass@localhost:5432/bookit_db"
+    "DATABASE_URL", "postgresql://bookit:bookit_pass@localhost:5432/bookit_db"
 )
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 
+# pylint: disable=too-few-public-methods
 class Base(DeclarativeBase):
-    pass
+    """Base class for all SQLAlchemy ORM models."""
 
 
-class User(Base):
+class User(Base):  # pylint: disable=too-few-public-methods
+    """User model representing a system user (tutor or student)."""
+
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -27,7 +33,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(String, nullable=False)
 
 
-class Lesson(Base):
+class Lesson(Base):  # pylint: disable=too-few-public-methods
+    """Lesson model representing a tutoring lesson."""
+
     __tablename__ = "lessons"
 
     lesson_id: Mapped[str] = mapped_column(String, primary_key=True)
@@ -40,7 +48,9 @@ class Lesson(Base):
     available: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
-class InvalidatedToken(Base):
+class InvalidatedToken(Base):  # pylint: disable=too-few-public-methods
+    """InvalidatedToken model for tracking revoked authentication tokens."""
+
     __tablename__ = "invalidated_tokens"
 
     token: Mapped[str] = mapped_column(String, primary_key=True)
@@ -49,12 +59,19 @@ class InvalidatedToken(Base):
 
 
 def init_db():
-    """Creates all tables if they don't exist"""
+    """Create all database tables if they don't exist."""
     Base.metadata.create_all(bind=engine)
 
 
 def get_db():
-    """Yields a database session - use this with FastAPI's Depends()"""
+    """
+    Yield a database session for dependency injection.
+
+    Use this with FastAPI's Depends() to inject a session into route handlers.
+
+    Yields:
+        SessionLocal: A SQLAlchemy database session.
+    """
     db = SessionLocal()
     try:
         yield db

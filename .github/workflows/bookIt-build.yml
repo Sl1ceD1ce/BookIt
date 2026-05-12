@@ -22,23 +22,23 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      
-      # - name: Run pylint
-      #   working-directory: ./src
-      #   run: |
-      #     pylint *.py
+
+      - name: Run pylint
+        working-directory: ./src
+        run: |
+          pylint *.py
 
       - name: Run tests
         working-directory: ./src
         run: |
           python -m pytest -v
-      
+
       #- name: Start FastAPI server
       #  working-directory: ./src
       #  run: |
