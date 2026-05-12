@@ -1,0 +1,8 @@
+fastapi
+pytest
+PyJWT
+pydantic
+pydantic[email]
+uvicorn
+httpx
+pylint
