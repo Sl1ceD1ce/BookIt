@@ -60,7 +60,7 @@ async def logout_user_route(token: str = Depends(oauth2_scheme), db: Session = D
         raise HTTPException(status_code=401, detail=str(e))
     
 @app.delete("/users", status_code=200)
-async def logout_user_route(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+async def delete_user_route(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """Delete a user"""
     try:
         res = auth.delete_user(token, db)
