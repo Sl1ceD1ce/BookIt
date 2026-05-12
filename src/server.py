@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
-import dataStore as ds
+import data_store as ds
 import auth
 import lessons
 from schemas import (
@@ -64,7 +64,7 @@ async def logout_user_route(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail=str(e))
     
 @app.delete("/users", status_code=200)
-async def logout_user_route(token: str = Depends(oauth2_scheme)):
+async def delete_user_route(token: str = Depends(oauth2_scheme)):
     """Delete a user"""
     try:
         res = auth.delete_user(token)
@@ -133,7 +133,7 @@ async def lesson_update(
     
 
 @app.delete("/lessons/{lesson_id}", status_code=200)
-async def lesson_update(
+async def lesson_delete(
     lesson_id: str, token: str = Depends(oauth2_scheme)
 ):
     try:

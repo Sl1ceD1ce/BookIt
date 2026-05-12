@@ -1,6 +1,6 @@
 import os
 import pytest
-import dataStore as ds
+import data_store as ds
 from server import app
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
@@ -175,7 +175,7 @@ class TestLessonCreate:
             },
         )
 
-        assert res2.status_code == 400 or res2.status_code == 409
+        assert res2.status_code in {400, 409}
         assert "overlaps" in res2.json()["detail"].lower()
 
     def test_invalid_time_values(self, reset_data):

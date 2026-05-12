@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
-import helpers
-import dataStore as ds
 from fastapi import HTTPException
+
+import helpers
+import data_store as ds
 
 
 def register_user(user_data) -> dict:
@@ -105,7 +105,7 @@ def logout_user(token: str) -> dict:
     helpers.invalidate_token(token)
 
     return {"message": "Logged out successfully"}
-   
+
 
 
 def delete_user(token: str) -> dict:
