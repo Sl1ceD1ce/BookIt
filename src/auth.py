@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import select
+from sqlalchemy import delete, select, update
 import helpers
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -83,7 +83,7 @@ def logout_user(token: str, db: Session) -> dict:
         raise ValueError("token is invalid")
 
     # Invalidate the token
-    helpers.invalidate_token(token)
+    helpers.invalidate_token(token, db)
 
     return {"message": "Logged out successfully"}
    
@@ -102,21 +102,13 @@ def delete_user(token: str, db: Session) -> dict:
 
     # If user is a tutor, delete all their lessons
     if user_data.role == "tutor":
-        lessons = db.execute(select(Lesson).where(Lesson.tutor_id == user_data.id)).scalars().all()
-        for lesson in lessons:
-            db.delete(lesson)
+        lessons = db.execute(delete(Lesson).where(Lesson.tutor_id == user_data.id))
     else:  # Student
         # Remove student from all lessons they're enrolled in
-        lessons = db.execute(select(Lesson).where(Lesson.assigned_student_id == user_data.id)).scalars().all()
-        
-        for lesson in lessons:
-            lesson.assigned_student_id = None
-            lesson.available = True
+        lessons = db.execute(update(Lesson).where(Lesson.assigned_student_id == user_data.id).values(assigned_student_id=None, available=True))
 
     # Remove the user from the datastore
-    users = db.execute(select(User).where(User.id == user_data.id)).scalars().all()
-    for user in users:
-        db.delete(user)
+    db.delete(user_data)
 
     # Invalidate the token
     helpers.invalidate_token(token, db)
