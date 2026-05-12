@@ -1,11 +1,11 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, and_
 import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 import uuid
 from fastapi import HTTPException
-from database import User, InvalidatedToken
+from database import User, InvalidatedToken, Lesson
 
 
 def create_jwt_token(user_id: str) -> str:
@@ -54,12 +54,8 @@ def is_token_blacklisted(token: str, db: Session) -> bool:
     return db.execute(select(InvalidatedToken).where(InvalidatedToken.token == token)).scalar_one_or_none() is not None
 
 
-def find_lesson_info(lesson_id: str):
-    data = ds.get_data()
-    for lesson in data["lessons"]:
-        if lesson_id == lesson["lesson_id"]:
-            return lesson
-    return None
+def find_lesson_info(lesson_id: str, db: Session):
+    return db.execute(Lesson.select(Lesson.lesson_id == lesson_id)).scalar_one_or_none()
 
 def is_valid_datetime(string: str) -> bool:
     try: 
@@ -68,25 +64,31 @@ def is_valid_datetime(string: str) -> bool:
     except ValueError:
         return False
     
-def get_lessons() -> list:
-    data = ds.get_data()
-    return data["lessons"]
+def get_lessons(db) -> list:
+    stmt = select(Lesson)
+    result = db.execute(stmt)
+    return result.scalars().all()
 
-def check_lesson_time(user_data, lesson_data, lesson_id):
-    existing_lessons = []
-    for lesson in ds.get_data()["lessons"]:
-        if lesson["tutor_id"] == user_data["id"]:
-            existing_lessons.append(lesson)
+def check_lesson_time(user_data, lesson_data, lesson_id, db):
+    new_start = datetime.fromisoformat(lesson_data["start_time"])
+    new_end = datetime.fromisoformat(lesson_data["end_time"])
 
-    for lesson in existing_lessons:
-        if lesson['lesson_id'] == lesson_id:
-            continue
+    stmt = select(Lesson).where(
+        Lesson.tutor_id == user_data["id"],
+        Lesson.id != lesson_id,
+        and_(
+            new_start < Lesson.end_time,
+            Lesson.start_time < new_end
+        )
+    )
 
-        existing_start = datetime.fromisoformat(lesson["start_time"])
-        existing_end = datetime.fromisoformat(lesson["end_time"])
+    conflict = db.execute(stmt).scalar_one_or_none()
 
-        if (datetime.fromisoformat(lesson_data["start_time"]) < existing_end and existing_start < datetime.fromisoformat(lesson_data["end_time"])):
-            raise HTTPException(status_code=400, detail="Lesson overlaps with existing lesson")
+    if conflict:
+        raise HTTPException(
+            status_code=400,
+            detail="Lesson overlaps with existing lesson"
+        )
 
 def invalidate_token(token: str, db: Session) -> None:
     decoded = decode_jwt_token(token)
