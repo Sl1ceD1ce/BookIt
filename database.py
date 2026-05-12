@@ -1,10 +1,11 @@
 import os
+from typing import Optional
 from sqlalchemy import create_engine, Column, String, Boolean, Integer
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Mapped, mapped_column
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://bookit:bookit_pass@localhost:5432/bookit_db"
+    "postgresql://bookit:bookit_pass@db:5432/bookit_db"
 )
 
 engine = create_engine(DATABASE_URL)
