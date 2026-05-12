@@ -4,7 +4,7 @@ import os
 import jwt
 from constants import JWT_ALGORITHM, JWT_SECRET
 import pytest
-import dataStore as ds
+import datastore as ds
 from server import app
 from fastapi.testclient import TestClient
 

@@ -1,6 +1,6 @@
 import os
 import pytest
-import dataStore as ds
+import datastore as ds
 from server import app
 from fastapi.testclient import TestClient
 
