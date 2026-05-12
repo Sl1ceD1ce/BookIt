@@ -1,6 +1,6 @@
 import os
 import pytest
-import dataStore as ds
+import data_store as ds
 from server import app
 from datetime import datetime, timedelta
 from fastapi.testclient import TestClient

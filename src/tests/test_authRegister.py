@@ -1,5 +1,5 @@
 import pytest
-import dataStore as ds
+import data_store as ds
 import os
 from server import app
 from schemas import UserRegister

@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+"""User authentication module handling registration, login, and token management."""
+
 import helpers
-import dataStore as ds
-from fastapi import HTTPException
-from schemas import UserRegister, UserLogin, LessonResponse
+import data_store as ds
+from schemas import UserRegister, UserLogin
 
 
 def register_user(user_data: UserRegister) -> dict:
@@ -23,7 +23,7 @@ def register_user(user_data: UserRegister) -> dict:
         "last_name": user_data.last_name,
         "email": user_data.email,
         "mobile": user_data.mobile,
-        "password": user_data.password,  # TODO: hash password
+        "password": user_data.password,  # hash password
         "role": "tutor" if user_data.tutor else "student",
         "payment_schedule": {},
         "availability": [],
@@ -62,6 +62,7 @@ def register_user(user_data: UserRegister) -> dict:
 
 
 def login_user(login_data: UserLogin) -> dict:
+    """Authenticate user credentials and return JWT token."""
     data = ds.get_data()
 
     user = None
@@ -78,14 +79,8 @@ def login_user(login_data: UserLogin) -> dict:
 
 
 def get_users(token: str) -> dict:
-    if helpers.is_token_blacklisted(token):
-        raise ValueError("token is invalid")
-
-    decoded_token = helpers.decode_jwt_token(token)
-    user_data = helpers.find_user_info(decoded_token)
-
-    if not user_data:
-        raise ValueError("user does not exist")
+    """Retrieve authenticated user information from token."""
+    user_data = helpers.validate_and_get_user(token)
 
     return {
         "email": user_data["email"],
@@ -109,14 +104,7 @@ def logout_user(token: str) -> dict:
 
 def delete_user(token: str) -> dict:
     """Deletes a user from the system including the associated lessons if the user is a tutor"""
-    if helpers.is_token_blacklisted(token):
-        raise HTTPException(status_code=401, detail="Token is invalid")
-
-    decoded_token = helpers.decode_jwt_token(token)
-    user_data = helpers.find_user_info(decoded_token)
-
-    if not user_data:
-        raise HTTPException(status_code=401, detail="User does not exist")
+    user_data = helpers.validate_and_get_user(token)
 
     # If user is a tutor, delete all their lessons
     if user_data["role"] == "tutor":
