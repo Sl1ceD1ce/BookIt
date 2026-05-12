@@ -62,9 +62,10 @@ async def logout_user_route(token: str = Depends(oauth2_scheme)):
         return res
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-    
+
+
 @app.delete("/users", status_code=200)
-async def logout_user_route(token: str = Depends(oauth2_scheme)):
+async def delete_user_route(token: str = Depends(oauth2_scheme)):
     """Delete a user"""
     try:
         res = auth.delete_user(token)
@@ -130,12 +131,10 @@ async def lesson_update(
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
-    
+
 
 @app.delete("/lessons/{lesson_id}", status_code=200)
-async def lesson_update(
-    lesson_id: str, token: str = Depends(oauth2_scheme)
-):
+async def lesson_delete(lesson_id: str, token: str = Depends(oauth2_scheme)):
     try:
         res = lessons.delete_lesson(token, lesson_id)
         ds.save_data()
