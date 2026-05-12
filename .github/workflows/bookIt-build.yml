@@ -22,17 +22,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       
-      # - name: Run pylint
-      #   working-directory: ./src
-      #   run: |
-      #     pylint *.py
+      - name: Run pylint
+        working-directory: ./src
+        # can change to --disable=C,R in future
+        run: |
+          pylint *.py --errors-only
 
       - name: Run tests
         working-directory: ./src

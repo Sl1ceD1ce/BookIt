@@ -2,11 +2,12 @@ import helpers
 import data_store as ds
 from fastapi import HTTPException
 from datetime import datetime
+from schemas import LessonCreate, LessonUpdate
 
 
 # May extend in future to make sure time is in the future
 # But we can simply make the frontend such that it only shows possible times
-def create_lesson(token: str, lesson_data) -> dict:
+def create_lesson(token: str, lesson_data: LessonCreate) -> dict:
     if helpers.is_token_blacklisted(token):
         raise ValueError("token is invalid")
 
@@ -18,28 +19,30 @@ def create_lesson(token: str, lesson_data) -> dict:
 
     if user_data["role"] != "tutor":
         raise PermissionError("Only tutors can create lessons")
-    
+
     if not helpers.is_valid_datetime(lesson_data.start_time):
         raise ValueError("start time is in invalid format")
-    
+
     if not helpers.is_valid_datetime(lesson_data.end_time):
         raise ValueError("end time is in invalid format")
 
-    delta = datetime.fromisoformat(lesson_data.end_time) - datetime.fromisoformat(lesson_data.start_time)
+    delta = datetime.fromisoformat(lesson_data.end_time) - datetime.fromisoformat(
+        lesson_data.start_time
+    )
     duration = int(delta.total_seconds() / 60)
 
     if datetime.fromisoformat(lesson_data.start_time) < datetime.now():
         raise HTTPException(status_code=400, detail="Lesson cannot start in the past")
-    
+
     if duration <= 0:
         raise HTTPException(status_code=400, detail="Invalid lesson duration")
 
     lesson_data_dict = {
         "start_time": lesson_data.start_time,
         "end_time": lesson_data.end_time,
-        "subject": lesson_data.subject
+        "subject": lesson_data.subject,
     }
-    
+
     lesson_id = helpers.generate_id()
     helpers.check_lesson_time(user_data, lesson_data_dict, lesson_id)
 
@@ -117,7 +120,9 @@ def book_lesson(token: str, lesson_id: str) -> dict:
     lesson_data["available"] = False
 
     if datetime.fromisoformat(str(lesson_data["start_time"])) < datetime.now():
-        raise HTTPException(status_code=400, detail="Lesson in the past cannot be booked")
+        raise HTTPException(
+            status_code=400, detail="Lesson in the past cannot be booked"
+        )
 
     return {
         "lesson_id": lesson_data["lesson_id"],
@@ -131,7 +136,7 @@ def book_lesson(token: str, lesson_id: str) -> dict:
     }
 
 
-def update_lesson(token: str, lesson_id: str, update_data) -> dict:
+def update_lesson(token: str, lesson_id: str, update_data: LessonUpdate) -> dict:
     if helpers.is_token_blacklisted(token):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
@@ -157,14 +162,14 @@ def update_lesson(token: str, lesson_id: str, update_data) -> dict:
 
         return lesson_data
     elif user_data["role"] == "tutor":
-        
+
         if update_data.start_time is not None:
             lesson_data["start_time"] = update_data.start_time.isoformat()
         if update_data.end_time is not None:
             lesson_data["end_time"] = update_data.end_time.isoformat()
         if update_data.subject is not None:
             lesson_data["subject"] = update_data.subject
-        
+
         # Always update student_email and status (even if None)
         lesson_data["assigned_student_id"] = update_data.assigned_student_id
         lesson_data["available"] = update_data.available
@@ -195,9 +200,7 @@ def delete_lesson(token: str, lesson_id: str) -> dict:
 
     if user_data["id"] != lesson_data["tutor_id"]:
         raise HTTPException(status_code=403, detail="User does not own lesson")
-    
+
     helpers.get_lessons().remove(lesson_data)
 
     return {"message": "lesson deleted successfully"}
-    
-
