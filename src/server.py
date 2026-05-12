@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
-import datastore as ds
+import dataStore as ds
 import auth
 import lessons
 from schemas import (

@@ -1,4 +1,4 @@
-import datastore as ds
+import dataStore as ds
 import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
