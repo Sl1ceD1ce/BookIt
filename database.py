@@ -31,7 +31,7 @@ class User(Base):
 class Lesson(Base):
     __tablename__ = "lessons"
 
-    lesson_id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     start_time: Mapped[str] = mapped_column(String, nullable=False)
     end_time: Mapped[str] = mapped_column(String, nullable=False)
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
