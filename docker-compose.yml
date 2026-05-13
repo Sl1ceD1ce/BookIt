@@ -25,7 +25,7 @@ services:
       environment:
         - POSTGRES_DB=bookit_db
         - POSTGRES_USER=bookit
-        - POSTGRES_PASSWORD=bookitproject
+        - POSTGRES_PASSWORD=bookit_pass
       expose:
         - 5432
       healthcheck:
