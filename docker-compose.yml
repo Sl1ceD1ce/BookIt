@@ -17,22 +17,21 @@ services:
       db:
         condition: service_healthy
   db:
-      image: postgres:16
-      restart: always
-      user: postgres
-      volumes:
-        - db-data:/var/lib/postgresql/data
-      environment:
-        - POSTGRES_DB=bookit_db
-        - POSTGRES_USER=bookit
-        - POSTGRES_PASSWORD=bookit_pass
-      expose:
-        - 5432
-      healthcheck:
-        test: [ "CMD", "pg_isready" ]
-        interval: 10s
-        timeout: 5s
-        retries: 5
+    image: postgres:16
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=bookit_db
+      - POSTGRES_USER=bookit
+      - POSTGRES_PASSWORD=bookit_pass
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 volumes:
   db-data:
 secrets:
