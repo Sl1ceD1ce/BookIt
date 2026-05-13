@@ -1,5 +1,5 @@
 import os
-os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -11,10 +11,12 @@ from database import Base, get_db
 
  
 engine = create_engine(
-    os.environ["DATABASE_URL"],
+    "sqlite:///:memory:",
     connect_args={"check_same_thread": False},
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+connection = engine.connect()
+Base.metadata.create_all(bind=connection)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=connection)
 
 def override_get_db():
     db = TestingSessionLocal()
