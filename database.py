@@ -2,12 +2,12 @@
 
 import os
 from typing import Optional
-
-from sqlalchemy import create_engine, String, Boolean, Integer
+from sqlalchemy import create_engine, Column, String, Boolean, Integer
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Mapped, mapped_column
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://bookit:bookit_pass@localhost:5432/bookit_db"
+    "DATABASE_URL",
+    "postgresql://bookit:bookit_pass@db:5432/bookit_db"
 )
 
 engine = create_engine(DATABASE_URL)
@@ -38,7 +38,7 @@ class Lesson(Base):  # pylint: disable=too-few-public-methods
 
     __tablename__ = "lessons"
 
-    lesson_id: Mapped[str] = mapped_column(String, primary_key=True)
+    id: Mapped[str] = mapped_column(String, primary_key=True)
     start_time: Mapped[str] = mapped_column(String, nullable=False)
     end_time: Mapped[str] = mapped_column(String, nullable=False)
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
