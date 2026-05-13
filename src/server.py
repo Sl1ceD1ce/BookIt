@@ -81,22 +81,19 @@ async def get_user_route(token: str = Depends(oauth2_scheme), db: Session = Depe
 
 
 @app.post("/lessons/{lesson_id}/book", response_model=LessonResponse, status_code=200)
-async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme)):
+async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme),
+                      db: Session = Depends(get_db)):
     try:
-        res = lessons.book_lesson(token, lesson_id)
-        ds.save_data()
-        return res
+        return lessons.book_lesson(token, lesson_id, db)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
 
 @app.post("/lessons", response_model=LessonResponse, status_code=201)
-async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme)):
+async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme),
+                        db: Session = Depends(get_db)):
     try:
-        res = lessons.create_lesson(token, lesson_data)
-        ds.save_data()
-
-        return res
+        return lessons.create_lesson(token, lesson_data, db)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -104,23 +101,20 @@ async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_s
 
 
 @app.get("/lessons", response_model=List[LessonResponse], status_code=200)
-async def lesson_get(token: str = Depends(oauth2_scheme)):
+async def lesson_get(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
-        res = lessons.get_user_lessons(token)
-        return res
+        return lessons.get_user_lessons(token, db)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
 
 
 @app.patch("/lessons/{lesson_id}", status_code=200)
 async def lesson_update(
-    update_data: LessonUpdate, lesson_id: str, token: str = Depends(oauth2_scheme)
+    update_data: LessonUpdate, lesson_id: str, token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
 ):
     try:
-        res = lessons.update_lesson(token, lesson_id, update_data)
-        ds.save_data()
-
-        return res
+        return lessons.update_lesson(token, lesson_id, update_data, db)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -128,12 +122,10 @@ async def lesson_update(
 
 
 @app.delete("/lessons/{lesson_id}", status_code=200)
-async def lesson_delete(lesson_id: str, token: str = Depends(oauth2_scheme)):
+async def lesson_delete(lesson_id: str, token: str = Depends(oauth2_scheme),
+                        db: Session = Depends(get_db)):
     try:
-        res = lessons.delete_lesson(token, lesson_id)
-        ds.save_data()
-
-        return res
+        return lessons.delete_lesson(token, lesson_id, db)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

@@ -1,5 +1,5 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session, and_
+from sqlalchemy import select, and_
+from sqlalchemy.orm import Session
 import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
@@ -55,7 +55,7 @@ def is_token_blacklisted(token: str, db: Session) -> bool:
 
 
 def find_lesson_info(lesson_id: str, db: Session):
-    return db.execute(Lesson.select(Lesson.lesson_id == lesson_id)).scalar_one_or_none()
+    return db.execute(select(Lesson).where(Lesson.id == lesson_id)).scalar_one_or_none()
 
 def is_valid_datetime(string: str) -> bool:
     try: 
@@ -74,11 +74,11 @@ def check_lesson_time(user_data, lesson_data, lesson_id, db):
     new_end = datetime.fromisoformat(lesson_data["end_time"])
 
     stmt = select(Lesson).where(
-        Lesson.tutor_id == user_data["id"],
+        Lesson.tutor_id == user_data.id,
         Lesson.id != lesson_id,
         and_(
-            new_start < Lesson.end_time,
-            Lesson.start_time < new_end
+            new_start.isoformat() < Lesson.end_time,
+            Lesson.start_time < new_end.isoformat()
         )
     )
 

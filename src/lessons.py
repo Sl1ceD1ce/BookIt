@@ -1,8 +1,8 @@
 import helpers
 from fastapi import HTTPException
 from datetime import datetime
-from sqlalchemy.orm import Session, or_
-from sqlalchemy import select
+from sqlalchemy.orm import Session
+from sqlalchemy import select, or_
 
 from database import Lesson
 
@@ -71,12 +71,10 @@ def create_lesson(token: str, lesson_data, db: Session) -> dict:
         "end_time": lesson_data.end_time,
         "duration": duration,
         "subject": lesson_data.subject,
-        "tutor_id": user["id"],
+        "tutor_id": user.id,
         "assigned_student_id": None,
         "available": True,
     }
-
-
 
 def get_user_lessons(token: str, db: Session) -> list:
     if helpers.is_token_blacklisted(token, db):
@@ -189,7 +187,12 @@ def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
         lesson.assigned_student_id = update_data.assigned_student_id
         lesson.available = update_data.available
  
-        helpers.check_lesson_time(user, lesson, lesson_id, db)
+        helpers.check_lesson_time(
+            user,
+            {"start_time": lesson.start_time, "end_time": lesson.end_time}, 
+            lesson_id, 
+            db
+        )
     else:
         raise HTTPException(status_code=401, detail="User has invalid role")
 
