@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from server import app
 from database import Base, get_db
 
- 
+
 engine = create_engine(
     "sqlite:///:memory:",
     connect_args={"check_same_thread": False},
@@ -30,9 +30,9 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture(autouse=True)
 def reset_db():
     """Create all tables before each test, drop them after."""
-    Base.metadata.create_all(bind=engine)
+    transaction = connection.begin_nested()
     yield
-    Base.metadata.drop_all(bind=engine)
+    transaction.rollback()
 
 @pytest.fixture
 def db():
