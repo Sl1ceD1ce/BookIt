@@ -1,29 +1,11 @@
 from datetime import datetime, timedelta, timezone
-import os
-
 import jwt
 from constants import JWT_ALGORITHM, JWT_SECRET
-import pytest
-import data_store as ds
 from server import app
-from fastapi.testclient import TestClient
-
-client = TestClient(app)
-
-TEST_DB = "data.json"
-
-@pytest.fixture
-def reset_data():
-    """Reset datastore before each test"""
-    ds.data = {"users": [], "lessons": [], "invalidated_tokens": []}
-    yield
-    # Cleanup
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
 
 
 class TestUserLogout:
-    def test_logout_success(self, reset_data):
+    def test_logout_success(self, client):
         register = client.post(
             "/users/register", 
             json={
@@ -49,15 +31,15 @@ class TestUserLogout:
         res = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
         assert res.status_code == 401
 
-    def test_get_users_no_token(self, reset_data):
+    def test_get_users_no_token(self, client):
         res = client.post("/users/logout", headers={"Authorization": f"Bearer"})
         assert res.status_code == 401
 
-    def test_get_users_invalid_token(self, reset_data):
+    def test_get_users_invalid_token(self, client):
         res = client.post("/users/logout", headers={"Authorization": f"Bearer invalid-token"})
         assert res.status_code == 401
     
-    def test_logout_twice_same_token(self, reset_data):
+    def test_logout_twice_same_token(self, client):
         """Cannot logout twice with the same token"""
         
         register_res = client.post(
@@ -88,17 +70,17 @@ class TestUserLogout:
         )
         assert response2.status_code == 401
 
-    def test_logout_with_empty_bearer_token(self, reset_data):
+    def test_logout_with_empty_bearer_token(self, client):
         """Logout with malformed authorization header"""
         res = client.post("/users/logout", headers={"Authorization": "Bearer "})
         assert res.status_code == 401
 
-    def test_logout_without_authorization_header(self, reset_data):
+    def test_logout_without_authorization_header(self, client):
         """Cannot logout without Authorization header"""
         res = client.post("/users/logout")
         assert res.status_code == 401
 
-    def test_logout_with_expired_token(self, reset_data):
+    def test_logout_with_expired_token(self, client):
         """Cannot logout with already expired token"""
         expired_payload = {
             "user_id": "999",
