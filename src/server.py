@@ -8,13 +8,8 @@ from fastapi import FastAPI, HTTPException, Depends
 
 # pylint: disable=import-error
 from fastapi.security import OAuth2PasswordBearer
-<<<<<<< HEAD
-
-import data_store as ds
-=======
 from database import init_db, get_db
 from sqlalchemy.orm import Session
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
 import auth
 import lessons
 from schemas import (
