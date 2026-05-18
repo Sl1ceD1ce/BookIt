@@ -1,17 +1,28 @@
 from datetime import datetime, timedelta, timezone
+import os
 
 import jwt
 from constants import JWT_ALGORITHM, JWT_SECRET
-<<<<<<< HEAD
 import pytest
-import data_store as ds
-=======
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
+import dataStore as ds
 from server import app
+from fastapi.testclient import TestClient
 
+client = TestClient(app)
+
+TEST_DB = "data.json"
+
+@pytest.fixture
+def reset_data():
+    """Reset datastore before each test"""
+    ds.data = {"users": [], "lessons": [], "invalidated_tokens": []}
+    yield
+    # Cleanup
+    if os.path.exists(TEST_DB):
+        os.remove(TEST_DB)
 
 class TestUserInfo:
-    def test_get_users_success_student(self, client):
+    def test_get_users_success_student(self, reset_data):
         register = client.post(
             "/users/register", 
             json={
@@ -34,7 +45,7 @@ class TestUserInfo:
             "tutor":False
         }
     
-    def test_get_users_success_tutor(self, client):
+    def test_get_users_success_tutor(self, reset_data):
         register = client.post(
             "/users/register", 
             json={
@@ -57,20 +68,20 @@ class TestUserInfo:
             "tutor":True
         }
     
-    def test_get_users_no_token(self, client):
+    def test_get_users_no_token(self, reset_data):
         res = client.get("/users/", headers={"Authorization": f"Bearer"})
         assert res.status_code == 401
 
-    def test_get_users_invalid_token(self, client):
+    def test_get_users_invalid_token(self, reset_data):
         res = client.get("/users/", headers={"Authorization": f"Bearer invalid-token"})
         assert res.status_code == 401
     
-    def test_get_users_without_authorization_header(self, client):
+    def test_get_users_without_authorization_header(self, reset_data):
         """Cannot get user info without Authorization header"""
         res = client.get("/users/")
         assert res.status_code == 401
     
-    def test_get_users_after_logout(self, client):
+    def test_get_users_after_logout(self, reset_data):
         """Cannot get user info after logging out"""
         register = client.post("/users/register", json={
             "first_name": "John",
@@ -89,7 +100,7 @@ class TestUserInfo:
         res = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
         assert res.status_code == 401
     
-    def test_get_users_with_expired_token(self, client):
+    def test_get_users_with_expired_token(self, reset_data):
         """Cannot get user info with expired token"""
         expired_payload = {
             "user_id": "999",
@@ -101,8 +112,9 @@ class TestUserInfo:
         res = client.get("/users/", headers={"Authorization": f"Bearer {expired_token}"})
         assert res.status_code == 401
     
-    def test_multiple_get_users(self, client):
+    def test_multiple_get_users(self, reset_data):
         """Get user info returns the correct user's data"""
+        # Register two users
         user1 = client.post("/users/register", json={
             "first_name": "John",
             "last_name": "Doe",
@@ -124,8 +136,10 @@ class TestUserInfo:
         token1 = user1.json()["token"]
         token2 = user2.json()["token"]
         
+        # Get user1's info
         res1 = client.get("/users/", headers={"Authorization": f"Bearer {token1}"})
         assert res1.json()["email"] == "john@example.com"
         
+        # Get user2's info
         res2 = client.get("/users/", headers={"Authorization": f"Bearer {token2}"})
         assert res2.json()["email"] == "jane@example.com"

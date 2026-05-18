@@ -1,13 +1,24 @@
-<<<<<<< HEAD
 import os
 import pytest
-import data_store as ds
-=======
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
+import dataStore as ds
 from server import app
+from fastapi.testclient import TestClient
+
+client = TestClient(app)
+
+TEST_DB = "data.json"
+
+@pytest.fixture
+def reset_data():
+    """Reset datastore before each test"""
+    ds.data = {"users": [], "lessons": [], "invalidated_tokens": []}
+    yield
+    # Cleanup
+    if os.path.exists(TEST_DB):
+        os.remove(TEST_DB)
 
 class TestUserLogin:
-    def test_login_success(self, client):
+    def test_login_success(self, reset_data):
         register = client.post(
             "/users/register", 
             json={
@@ -39,7 +50,7 @@ class TestUserLogin:
             "tutor":False
         }
 
-    def test_login_incorrect_password(self, client):
+    def test_login_incorrect_password(self, reset_data):
         register = client.post(
             "/users/register", 
             json={
@@ -58,7 +69,7 @@ class TestUserLogin:
             })
         assert res.status_code == 400
 
-    def test_login_incorrect_email(self, client):
+    def test_login_incorrect_email(self, reset_data):
         register = client.post(
             "/users/register", 
             json={

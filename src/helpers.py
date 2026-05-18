@@ -1,14 +1,14 @@
-"""Module containing all helpers"""
-
+from sqlalchemy import select, and_
+from sqlalchemy.orm import Session
+import jwt
+from datetime import datetime, timedelta, timezone
+from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 import uuid
 from datetime import datetime, timedelta, timezone
 
 # pylint: disable=import-error
 from fastapi import HTTPException
-import jwt
-
-import data_store as ds
-from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
+from database import User, InvalidatedToken, Lesson
 
 
 def create_jwt_token(user_id: str) -> str:
@@ -41,49 +41,25 @@ def generate_id() -> str:
     return str(uuid.uuid4())
 
 
-def email_exists(email: str) -> bool:
-    """checks if the given email already exists"""
-    data = ds.get_data()
-    for user in data["users"]:
-        if user["email"] == email:
-            return True
-    return False
+def email_exists(email: str, db: Session) -> bool:
+    return db.execute(select(User).where(User.email == email)).scalar_one_or_none() is not None
 
 
-def mobile_exists(mobile: str) -> bool:
-    """checks if the given mobile already exists"""
-    data = ds.get_data()
-    for user in data["users"]:
-        if user["mobile"] == mobile:
-            return True
-    return False
+def mobile_exists(mobile: str, db: Session) -> bool:
+    return db.execute(select(User).where(User.mobile == mobile)).scalar_one_or_none() is not None
 
 
-def find_user_info(decoded_token: dict) -> dict | None:
-    """finds a users info for a given token"""
-    data = ds.get_data()
-    for user in data["users"]:
-        if decoded_token["user_id"] == user["id"]:
-            return user
-    return None
+def find_user_info(decoded_token: dict, db: Session):
+    return db.execute(select(User).where(User.id == decoded_token["user_id"])).scalar_one_or_none()
 
 
-def is_token_blacklisted(token: str) -> bool:
+def is_token_blacklisted(token: str, db: Session) -> bool:
     """Check if token has been invalidated"""
-    data = ds.get_data()
-    for entry in data["invalidated_tokens"]:
-        if entry["token"] == token:
-            return True
-    return False
+    return db.execute(select(InvalidatedToken).where(InvalidatedToken.token == token)).scalar_one_or_none() is not None
 
 
-def find_lesson_info(lesson_id: str) -> dict | None:
-    """finds the info for a gien lessonid"""
-    data = ds.get_data()
-    for lesson in data["lessons"]:
-        if lesson_id == lesson["lesson_id"]:
-            return lesson
-    return None
+def find_lesson_info(lesson_id: str, db: Session):
+    return db.execute(select(Lesson).where(Lesson.id == lesson_id)).scalar_one_or_none()
 
 
 def is_valid_datetime(string: str) -> bool:
@@ -93,61 +69,35 @@ def is_valid_datetime(string: str) -> bool:
         return True
     except ValueError:
         return False
+    
+def get_lessons(db) -> list:
+    stmt = select(Lesson)
+    result = db.execute(stmt)
+    return result.scalars().all()
 
+def check_lesson_time(user_data, lesson_data, lesson_id, db):
+    new_start = datetime.fromisoformat(lesson_data["start_time"])
+    new_end = datetime.fromisoformat(lesson_data["end_time"])
 
-def get_lessons() -> list:
-    """gets all lessons from data"""
-    data = ds.get_data()
-    return data["lessons"]
-
-
-def check_lesson_time(user_data, lesson_data, lesson_id):
-    """Checks that a lesson time doesn't overlap with another lesson"""
-    existing_lessons = []
-    for lesson in ds.get_data()["lessons"]:
-        if lesson["tutor_id"] == user_data["id"]:
-            existing_lessons.append(lesson)
-
-    for lesson in existing_lessons:
-        if lesson["lesson_id"] == lesson_id:
-            continue
-
-        existing_start = datetime.fromisoformat(lesson["start_time"])
-        existing_end = datetime.fromisoformat(lesson["end_time"])
-
-        if datetime.fromisoformat(
-            lesson_data["start_time"]
-        ) < existing_end and existing_start < datetime.fromisoformat(
-            lesson_data["end_time"]
-        ):
-            raise HTTPException(
-                status_code=400, detail="Lesson overlaps with existing lesson"
-            )
-
-
-def invalidate_token(token: str) -> None:
-    """Invalidates a users token from the database"""
-    data = ds.get_data()
-
-    decoded = decode_jwt_token(token)
-    data["invalidated_tokens"].append(
-        {
-            "token": token,
-            "user_id": decoded["user_id"],
-            "invalidated_at": datetime.now(timezone.utc).isoformat(),
-        }
+    stmt = select(Lesson).where(
+        Lesson.tutor_id == user_data.id,
+        Lesson.id != lesson_id,
+        and_(
+            new_start.isoformat() < Lesson.end_time,
+            Lesson.start_time < new_end.isoformat()
+        )
     )
 
+    conflict = db.execute(stmt).scalar_one_or_none()
 
-def validate_and_get_user(token: str) -> dict:
-    """Validate a token and retrieve the associated user."""
-    if is_token_blacklisted(token):
-        raise ValueError("token is invalid")
+    if conflict:
+        raise HTTPException(
+            status_code=400,
+            detail="Lesson overlaps with existing lesson"
+        )
 
-    decoded_token = decode_jwt_token(token)
-    user_data = find_user_info(decoded_token)
-
-    if not user_data:
-        raise ValueError("user does not exist")
-
-    return user_data
+def invalidate_token(token: str, db: Session) -> None:
+    decoded = decode_jwt_token(token)
+    invalid_token = InvalidatedToken(token=token, user_id=decoded["user_id"], invalidated_at=datetime.now(timezone.utc).isoformat())
+    db.add(invalid_token)
+    db.commit()

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import os
 import pytest
 import data_store as ds
@@ -53,226 +54,84 @@ sampleLesson = {
     "subject": "Math",
 }
 
+=======
+from helpers import decode_jwt_token
+>>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
 
 class TestLessonUpdate:
-    # TODO: Add more cases after smaller errors in previous functions are fixed
-
-    def test_successfulLessonTutorUpdate(self, reset_data):
-        # sets up a standard tutor instance and lesson instance
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
+    def test_successful_delete_with_booked_student(self, client, booked_lesson):
+        tutor_token, student_token, lesson = booked_lesson
+ 
+        res = client.delete(
+            f"/lessons/{lesson['lesson_id']}",
+            headers={"Authorization": f"Bearer {tutor_token}"},
         )
-
-        lessonData = lessonJson.json()
-
-        patchRes = client.patch(
-            f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {tutorToken}"},
-            json={
-                "start_time": newStart.isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "Physics",
-                "assigned_student_id": None,
-                "available": True,
-            },
-        )
-
-        assert patchRes.status_code == 200
-        patchRes = patchRes.json()
-
-        getRes = client.get(
-            "/lessons", headers={"Authorization": f"Bearer {tutorToken}"}
-        )
-
-        assert getRes.status_code == 200
-        lessons = getRes.json()
-
-        assert len(lessons) == 1
-        assert lessons[0]["lesson_id"] == lessonData["lesson_id"]
-        assert lessons[0]["subject"] == "Physics"
-        assert lessons[0]["start_time"] == newStart.isoformat()
-        assert lessons[0]["end_time"] == newEnd.isoformat()
-        assert lessons[0]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
-        assert lessons[0]["assigned_student_id"] is None
-        assert lessons[0]["available"] == True
-
-    def test_successfulLessonStudentUpdate(self, reset_data):
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
-        )
-
-        lessonData = lessonJson.json()
-
-        assert lessonData["available"] == False
-        assert lessonData["assigned_student_id"] == helpers.decode_jwt_token(studentToken)["user_id"]
-
-        patchRes = client.patch(
-            f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {studentToken}"},
-            json={"assigned_student_id": None, "available": True},
-        )
-
-        assert patchRes.status_code == 200
-        patchRes = patchRes.json()
-
-        getRes = client.get(
-            "/lessons", headers={"Authorization": f"Bearer {tutorToken}"}
-        )
-
-        assert getRes.status_code == 200
-        lessons = getRes.json()
-
-        getRes2 = client.get(
-            "/lessons", headers={"Authorization": f"Bearer {studentToken}"}
-        )
-        assert getRes2.status_code == 200
-        lessons2 = getRes2.json()
-
-        assert len(lessons2) == 0
-
-        assert len(lessons) == 1
-        assert lessons[0]["lesson_id"] == lessonData["lesson_id"]
-        assert lessons[0]["subject"] == "Math"
-        assert lessons[0]["start_time"] == startTime.isoformat()
-        assert lessons[0]["end_time"] == endTime.isoformat()
-        assert lessons[0]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
-        assert lessons[0]["assigned_student_id"] is None
-        assert lessons[0]["available"] == True
-
-    def test_wrongRole(self, reset_data):
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
-        )
-
-        lessonData = lessonJson.json()
-
-        patchRes = client.patch(
-            f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {studentToken}"},
-            json={
-                "start_time": newStart.isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "Physics",
-            },
-        )
-
-        assert patchRes.status_code == 403
-
-    def test_invalidToken(self, reset_data):
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
-        )
-
-        lessonData = lessonJson.json()
-
-        patchRes = client.patch(
-            f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": "Bearer fakeToken123"},
-            json={
-                "start_time": newStart.isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "Physics",
-            },
-        )
-
-        assert patchRes.status_code == 401
-
-    def test_nonExistentLesson(self, reset_data):
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
-        )
-
-        lessonData = lessonJson.json()
-
-        patchRes = client.patch(
-            "/lessons/1394819509158",
-            headers={"Authorization": f"Bearer {tutorToken}"},
-            json={
-                "start_time": newStart.isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "Physics",
-            },
-        )
-
-        assert patchRes.status_code == 404
-
-    def test_updateDoesntChangeOtherLessons(self, reset_data):
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
-        )
-
-        lesson2 = client.post(
-            "/lessons/",
-            headers={"Authorization": f"Bearer {tutorToken}"},
-            json={
-                "start_time": newStart.isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "English",
-            },
-        )
-
-        lessonData = lessonJson.json()
-        lessonData2 = lesson2.json()
-
-        patchRes = client.patch(
-            f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {tutorToken}"},
-            json={
-                "start_time": (startTime + timedelta(days=2)).isoformat(),
-                "end_time": (endTime + timedelta(days=2)).isoformat(),
-                "subject": "Physics",
-                "assigned_student_id": None,
-                "available": True,
-            },
-        )
-
-        assert patchRes.status_code == 200
-        patchRes = patchRes.json()
-
-        getRes = client.get(
-            "/lessons", headers={"Authorization": f"Bearer {tutorToken}"}
-        )
-
-        assert getRes.status_code == 200
-        lessons = getRes.json()
-
+        assert res.status_code == 200
+ 
+        assert client.get("/lessons", headers={"Authorization": f"Bearer {tutor_token}"}).json() == []
+        assert client.get("/lessons", headers={"Authorization": f"Bearer {student_token}"}).json() == []
+ 
+    def test_successful_delete_unbooked_lesson(self, client, tutor_token, lesson_id):
+        res = client.delete(f"/lessons/{lesson_id}", headers={"Authorization": f"Bearer {tutor_token}"})
+        assert res.status_code == 200
+ 
+        lessons = client.get("/lessons", headers={"Authorization": f"Bearer {tutor_token}"}).json()
+        assert lessons == []
+ 
+    def test_correct_lesson_deleted(self, client, tutor_token, post_lesson, default_start, default_end):
+        from datetime import timedelta
+ 
+        res1 = post_lesson(tutor_token, default_start, default_end, subject="Math")
+        res2 = post_lesson(tutor_token, default_start + timedelta(days=1), default_end + timedelta(days=1), subject="Physics")
+        res3 = post_lesson(tutor_token, default_start + timedelta(days=2), default_end + timedelta(days=2), subject="English")
+ 
+        id1 = res1.json()["lesson_id"]
+        id2 = res2.json()["lesson_id"]
+        id3 = res3.json()["lesson_id"]
+ 
+        del_res = client.delete(f"/lessons/{id2}", headers={"Authorization": f"Bearer {tutor_token}"})
+        assert del_res.status_code == 200
+ 
+        lessons = client.get("/lessons", headers={"Authorization": f"Bearer {tutor_token}"}).json()
+        returned_ids = [l["lesson_id"] for l in lessons]
+ 
         assert len(lessons) == 2
-        assert lessons[1]["lesson_id"] == lessonData2["lesson_id"]
-        assert lessons[1]["subject"] == "English"
-        assert lessons[1]["start_time"] == newStart.isoformat()
-        assert lessons[1]["end_time"] == newEnd.isoformat()
-        assert lessons[1]["tutor_id"] == helpers.decode_jwt_token(tutorToken)["user_id"]
-        assert lessons[1]["assigned_student_id"] is None
-        assert lessons[1]["available"] == True
-    
-    def test_unsuccessfulUpdateOverlap(self, reset_data):
-        tutorToken, lessonJson, studentToken = standardTutorStudentLesson(
-            client, sampleTutor, sampleLesson, sampleStudent
+        assert id2 not in returned_ids
+        assert id1 in returned_ids
+        assert id3 in returned_ids
+ 
+    def test_delete_nonexistent_lesson(self, client, tutor_token):
+        res = client.delete("/lessons/fAKeID", headers={"Authorization": f"Bearer {tutor_token}"})
+        assert res.status_code == 404
+ 
+    def test_student_cannot_delete_lesson(self, client, booked_lesson):
+        tutor_token, student_token, lesson = booked_lesson
+ 
+        res = client.delete(
+            f"/lessons/{lesson['lesson_id']}",
+            headers={"Authorization": f"Bearer {student_token}"},
         )
-
-        lesson2 = client.post(
-            "/lessons/",
-            headers={"Authorization": f"Bearer {tutorToken}"},
-            json={
-                "start_time": newStart.isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "English",
-            },
-        )
-
-        lessonData = lessonJson.json()
-        lessonData2 = lesson2.json()
-
-        patchRes = client.patch(
-            f"/lessons/{lessonData['lesson_id']}",
-            headers={"Authorization": f"Bearer {tutorToken}"},
-            json={
-                "start_time": (newStart + timedelta(minutes=30)).isoformat(),
-                "end_time": newEnd.isoformat(),
-                "subject": "Physics",
-                "assigned_student_id": None,
-                "available": True,
-            },
-        )
-
-        assert patchRes.status_code == 400
+        assert res.status_code == 403
+ 
+        tutor_lessons = client.get("/lessons", headers={"Authorization": f"Bearer {tutor_token}"}).json()
+        student_lessons = client.get("/lessons", headers={"Authorization": f"Bearer {student_token}"}).json()
+ 
+        assert len(tutor_lessons) == 1
+        assert tutor_lessons[0]["lesson_id"] == lesson["lesson_id"]
+        assert tutor_lessons[0]["assigned_student_id"] == decode_jwt_token(student_token)["user_id"]
+        assert tutor_lessons[0]["available"] is False
+        assert tutor_lessons == student_lessons
+ 
+    def test_malformed_token(self, client, lesson_id):
+        res = client.delete(f"/lessons/{lesson_id}", headers={"Authorization": "Bearer aifajoajga"})
+        assert res.status_code == 401
+ 
+    def test_logged_out_token_rejected(self, client, tutor_token, lesson_id):
+        client.post("/users/logout", headers={"Authorization": f"Bearer {tutor_token}"})
+        res = client.delete(f"/lessons/{lesson_id}", headers={"Authorization": f"Bearer {tutor_token}"})
+        assert res.status_code == 401
+ 
+    def test_tutor_cannot_delete_others_lesson(self, client, lesson_id, register_user):
+        other_tutor = register_user(tutor=True, email="other@example.com", mobile="0412345679")
+        res = client.delete(f"/lessons/{lesson_id}", headers={"Authorization": f"Bearer {other_tutor}"})
+        assert res.status_code == 403
