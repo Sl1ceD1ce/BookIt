@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import os
-import pytest
-import data_store as ds
-=======
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
-from server import app
 from datetime import datetime, timedelta
 
 sampleTutor1 = {

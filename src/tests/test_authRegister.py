@@ -1,10 +1,4 @@
 import pytest
-<<<<<<< HEAD
-import data_store as ds
-import os
-=======
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
-from server import app
 from schemas import UserRegister
 import auth
 import helpers
@@ -12,7 +6,6 @@ from pydantic import ValidationError
 import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM
-from fastapi.testclient import TestClient
 
 
 class TestUserRegistration:

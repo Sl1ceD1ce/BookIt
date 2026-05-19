@@ -2,12 +2,6 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from constants import JWT_ALGORITHM, JWT_SECRET
-<<<<<<< HEAD
-import pytest
-import data_store as ds
-=======
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
-from server import app
 
 
 class TestUserInfo:

@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-import os
-import pytest
-import data_store as ds
-from server import app
-from fastapi.testclient import TestClient
-=======
->>>>>>> c58886ee518fd6d96d10b7cde49e291958771f97
 from datetime import datetime, timedelta
 from helpers import decode_jwt_token
 
