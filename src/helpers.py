@@ -4,11 +4,15 @@ import jwt
 from datetime import datetime, timedelta, timezone
 from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 import uuid
+from datetime import datetime, timedelta, timezone
+
+# pylint: disable=import-error
 from fastapi import HTTPException
 from database import User, InvalidatedToken, Lesson
 
 
 def create_jwt_token(user_id: str) -> str:
+    """Creates a jwt token"""
     expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXP_HOURS)
     payload = {"user_id": user_id, "exp": expiration}
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -26,10 +30,10 @@ def decode_jwt_token(token: str) -> dict:
     """
     try:
         return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-    except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
-    except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
+    except jwt.ExpiredSignatureError as exc:
+        raise ValueError("Token has expired") from exc
+    except jwt.InvalidTokenError as exc:
+        raise ValueError("Invalid token") from exc
 
 
 def generate_id() -> str:
@@ -57,8 +61,10 @@ def is_token_blacklisted(token: str, db: Session) -> bool:
 def find_lesson_info(lesson_id: str, db: Session):
     return db.execute(select(Lesson).where(Lesson.id == lesson_id)).scalar_one_or_none()
 
+
 def is_valid_datetime(string: str) -> bool:
-    try: 
+    """checks if the datetime si valid"""
+    try:
         datetime.fromisoformat(string)
         return True
     except ValueError:

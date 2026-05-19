@@ -1,4 +1,5 @@
-# TODO: Use environment variables or more secure method in production
+"""File containing constants used throughout
+Some constants will have to be updated later"""
 
 # Status codes
 OK = 200

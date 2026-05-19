@@ -19,9 +19,6 @@ services:
   db:
     image: postgres:16
     restart: always
-    user: postgres
-    secrets:
-      - db-password
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
@@ -31,10 +28,11 @@ services:
     expose:
       - 5432
     healthcheck:
-      test: ["CMD", "pg_isready"]
+      test: ["CMD", "pg_isready", "-U", "bookit", "-d", "bookit_db"]
       interval: 10s
       timeout: 5s
       retries: 5
+
 volumes:
   db-data:
 secrets:
