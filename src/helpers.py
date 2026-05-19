@@ -1,14 +1,29 @@
+"""
+Utility helper functions for authentication, validation, and database access.
+
+This module provides reusable helper functions for:
+- JWT token creation and decoding
+- UUID generation
+- User and lesson database lookups
+- Token invalidation checks
+- Datetime validation
+- Lesson scheduling conflict detection
+
+The functions in this module are primarily used by FastAPI route
+handlers and service-layer logic throughout the application.
+"""
+
+from datetime import datetime, timedelta, timezone
+import uuid
 from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 import jwt
-from datetime import datetime, timedelta, timezone
-from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
-import uuid
-from datetime import datetime, timedelta, timezone
 
 # pylint: disable=import-error
 from fastapi import HTTPException
 from database import User, InvalidatedToken, Lesson
+
+from constants import JWT_SECRET, JWT_ALGORITHM, JWT_EXP_HOURS
 
 
 def create_jwt_token(user_id: str) -> str:
@@ -42,23 +57,30 @@ def generate_id() -> str:
 
 
 def email_exists(email: str, db: Session) -> bool:
+    """Check if an email already exists."""
     return db.execute(select(User).where(User.email == email)).scalar_one_or_none() is not None
 
 
 def mobile_exists(mobile: str, db: Session) -> bool:
+    """Check if a mobile number already exists."""
     return db.execute(select(User).where(User.mobile == mobile)).scalar_one_or_none() is not None
 
 
 def find_user_info(decoded_token: dict, db: Session):
+    """Retrieve a user from a decoded token."""
     return db.execute(select(User).where(User.id == decoded_token["user_id"])).scalar_one_or_none()
 
 
 def is_token_blacklisted(token: str, db: Session) -> bool:
     """Check if token has been invalidated"""
-    return db.execute(select(InvalidatedToken).where(InvalidatedToken.token == token)).scalar_one_or_none() is not None
+    return db.execute(
+        select(InvalidatedToken)
+        .where(InvalidatedToken.token == token)
+        ).scalar_one_or_none() is not None
 
 
 def find_lesson_info(lesson_id: str, db: Session):
+    """Retrieve lesson information by lesson ID."""
     return db.execute(select(Lesson).where(Lesson.id == lesson_id)).scalar_one_or_none()
 
 
@@ -69,13 +91,15 @@ def is_valid_datetime(string: str) -> bool:
         return True
     except ValueError:
         return False
-    
+
 def get_lessons(db) -> list:
+    """Retrieve all lessons from the database."""
     stmt = select(Lesson)
     result = db.execute(stmt)
     return result.scalars().all()
 
 def check_lesson_time(user_data, lesson_data, lesson_id, db):
+    """Check for overlapping lessons for a tutor."""
     new_start = datetime.fromisoformat(lesson_data["start_time"])
     new_end = datetime.fromisoformat(lesson_data["end_time"])
 
@@ -97,7 +121,12 @@ def check_lesson_time(user_data, lesson_data, lesson_id, db):
         )
 
 def invalidate_token(token: str, db: Session) -> None:
+    """Invalidate a JWT token."""
     decoded = decode_jwt_token(token)
-    invalid_token = InvalidatedToken(token=token, user_id=decoded["user_id"], invalidated_at=datetime.now(timezone.utc).isoformat())
+    invalid_token = InvalidatedToken(
+        token=token,
+        user_id=decoded["user_id"],
+        invalidated_at=datetime.now(timezone.utc).isoformat()
+    )
     db.add(invalid_token)
     db.commit()

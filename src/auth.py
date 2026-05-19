@@ -1,6 +1,13 @@
+"""
+This module provides functionality for user actions.
+
+It includes functionality to register, login, logout
+get information and delete users.
+"""
+
 from sqlalchemy import delete, select, update
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from database import User, Lesson
 import helpers
@@ -47,7 +54,11 @@ def register_user(user_data, db: Session) -> dict:
 
 
 def login_user(login_data, db: Session) -> dict:
-    user = db.execute(select(User).where(User.password == login_data.password, User.email == login_data.email)).scalar_one_or_none()
+    """Login a previous user"""
+    user = db.execute(
+        select(User)
+        .where(User.password == login_data.password, User.email == login_data.email)
+        ).scalar_one_or_none()
 
     if not user:
         raise ValueError("incorrect username or password")
@@ -58,6 +69,7 @@ def login_user(login_data, db: Session) -> dict:
 
 
 def get_users(token: str, db: Session) -> dict:
+    """Get information of a user"""
     if helpers.is_token_blacklisted(token, db):
         raise ValueError("token is invalid")
 
@@ -85,7 +97,7 @@ def logout_user(token: str, db: Session) -> dict:
     helpers.invalidate_token(token, db)
 
     return {"message": "Logged out successfully"}
-   
+
 
 
 def delete_user(token: str, db: Session) -> dict:
@@ -101,10 +113,14 @@ def delete_user(token: str, db: Session) -> dict:
 
     # If user is a tutor, delete all their lessons
     if user_data.role == "tutor":
-        lessons = db.execute(delete(Lesson).where(Lesson.tutor_id == user_data.id))
+        db.execute(delete(Lesson).where(Lesson.tutor_id == user_data.id))
     else:  # Student
         # Remove student from all lessons they're enrolled in
-        lessons = db.execute(update(Lesson).where(Lesson.assigned_student_id == user_data.id).values(assigned_student_id=None, available=True))
+        db.execute(
+            update(Lesson)
+            .where(Lesson.assigned_student_id == user_data.id)
+            .values(assigned_student_id=None, available=True)
+        )
 
     # Remove the user from the datastore
     db.delete(user_data)

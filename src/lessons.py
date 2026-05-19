@@ -1,15 +1,21 @@
-import helpers
-from fastapi import HTTPException
+"""
+Lesson management services for creating, booking,
+updating, retrieving, and deleting lessons.
+"""
+
 from datetime import datetime
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 
 from database import Lesson
+import helpers
 
 
 # May extend in future to make sure time is in the future
 # But we can simply make the frontend such that it only shows possible times
 def create_lesson(token: str, lesson_data, db: Session) -> dict:
+    """Create a new lesson for a tutor."""
     if helpers.is_token_blacklisted(token, db):
         raise ValueError("token is invalid")
 
@@ -27,13 +33,13 @@ def create_lesson(token: str, lesson_data, db: Session) -> dict:
 
     if not helpers.is_valid_datetime(lesson_data.end_time):
         raise ValueError("end time is in invalid format")
-    
+
     start = datetime.fromisoformat(lesson_data.start_time)
     end = datetime.fromisoformat(lesson_data.end_time)
 
     if start < datetime.now():
         raise HTTPException(status_code=400, detail="Lesson cannot start in the past")
-    
+
     duration = int((end - start).total_seconds() / 60)
 
     if duration <= 0:
@@ -77,6 +83,7 @@ def create_lesson(token: str, lesson_data, db: Session) -> dict:
     }
 
 def get_user_lessons(token: str, db: Session) -> list:
+    """Retrieve all lessons associated with a user."""
     if helpers.is_token_blacklisted(token, db):
         raise ValueError("token is invalid")
 
@@ -112,6 +119,7 @@ def get_user_lessons(token: str, db: Session) -> list:
 
 
 def book_lesson(token: str, lesson_id: str, db: Session) -> dict:
+    """Book an available lesson for a student."""
     if helpers.is_token_blacklisted(token, db):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
@@ -134,10 +142,10 @@ def book_lesson(token: str, lesson_id: str, db: Session) -> dict:
 
     if datetime.fromisoformat(str(lesson.start_time)) < datetime.now():
         raise HTTPException(status_code=400, detail="Lesson in the past cannot be booked")
-    
+
     lesson.assigned_student_id = user.id
     lesson.available = False
- 
+
     db.commit()
     db.refresh(lesson)
 
@@ -152,8 +160,8 @@ def book_lesson(token: str, lesson_id: str, db: Session) -> dict:
         "available": lesson.available,
     }
 
-
 def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
+    """Update lesson details or booking information."""
     if helpers.is_token_blacklisted(token, db):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
@@ -161,7 +169,7 @@ def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
     user = helpers.find_user_info(decoded_token, db)
     if not user:
         raise HTTPException(status_code=401, detail="User does not exist")
-    
+
     lesson = helpers.find_lesson_info(lesson_id, db)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson does not exist")
@@ -170,27 +178,27 @@ def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
         if update_data.start_time or update_data.end_time or update_data.subject:
             raise HTTPException(status_code=403, detail="Only tutors can modify this")
 
-        # TODO: After transferring lessons to be id based instead of email based
+        # After transferring lessons to be id based instead of email based
         # Make it such that we validate that the student has this tutor as a tutor
 
         lesson.assigned_student_id = update_data.assigned_student_id
         lesson.available = update_data.available
     elif user.role == "tutor":
-        
+
         if update_data.start_time is not None:
             lesson.start_time = update_data.start_time.isoformat()
         if update_data.end_time is not None:
             lesson.end_time = update_data.end_time.isoformat()
         if update_data.subject is not None:
             lesson.subject = update_data.subject
- 
+
         lesson.assigned_student_id = update_data.assigned_student_id
         lesson.available = update_data.available
- 
+
         helpers.check_lesson_time(
             user,
-            {"start_time": lesson.start_time, "end_time": lesson.end_time}, 
-            lesson_id, 
+            {"start_time": lesson.start_time, "end_time": lesson.end_time},
+            lesson_id,
             db
         )
     else:
@@ -198,7 +206,7 @@ def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
 
     db.commit()
     db.refresh(lesson)
- 
+
     return {
         "lesson_id": lesson.id,
         "start_time": lesson.start_time,
@@ -211,6 +219,7 @@ def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
     }
 
 def delete_lesson(token: str, lesson_id: str, db: Session) -> dict:
+    """Delete a lesson owned by a tutor."""
     if helpers.is_token_blacklisted(token, db):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
@@ -218,7 +227,7 @@ def delete_lesson(token: str, lesson_id: str, db: Session) -> dict:
     user = helpers.find_user_info(decoded_token, db)
     if not user:
         raise HTTPException(status_code=401, detail="User does not exist")
-    
+
     lesson = helpers.find_lesson_info(lesson_id, db)
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson does not exist")
@@ -228,9 +237,8 @@ def delete_lesson(token: str, lesson_id: str, db: Session) -> dict:
 
     if user.id != lesson.tutor_id:
         raise HTTPException(status_code=403, detail="User does not own lesson")
-    
+
     db.delete(lesson)
     db.commit()
- 
-    return {"message": "lesson deleted successfully"}
 
+    return {"message": "lesson deleted successfully"}

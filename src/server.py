@@ -3,13 +3,12 @@
 from contextlib import asynccontextmanager
 from typing import List
 
-# pylint: disable=import-error
 from fastapi import FastAPI, HTTPException, Depends
 
-# pylint: disable=import-error
 from fastapi.security import OAuth2PasswordBearer
-from database import init_db, get_db
 from sqlalchemy.orm import Session
+
+from database import init_db, get_db
 import auth
 import lessons
 from schemas import (
@@ -26,9 +25,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
+    """Initialize application resources on startup."""
     init_db()
-    yield  
+    yield
 
 app = FastAPI(lifespan=lifespan)
 
@@ -81,6 +81,7 @@ async def delete_user_route(token: str = Depends(oauth2_scheme), db: Session = D
 
 @app.get("/users", status_code=200)
 async def get_user_route(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Retrieve user information."""
     try:
         return auth.get_users(token, db)
     except ValueError as e:
@@ -90,6 +91,7 @@ async def get_user_route(token: str = Depends(oauth2_scheme), db: Session = Depe
 @app.post("/lessons/{lesson_id}/book", response_model=LessonResponse, status_code=200)
 async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme),
                       db: Session = Depends(get_db)):
+    """Book a lesson."""
     try:
         return lessons.book_lesson(token, lesson_id, db)
     except ValueError as e:
@@ -99,6 +101,7 @@ async def lesson_book(lesson_id: str, token: str = Depends(oauth2_scheme),
 @app.post("/lessons", response_model=LessonResponse, status_code=201)
 async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_scheme),
                         db: Session = Depends(get_db)):
+    """Create a new lesson."""
     try:
         return lessons.create_lesson(token, lesson_data, db)
     except PermissionError as e:
@@ -109,6 +112,7 @@ async def lesson_create(lesson_data: LessonCreate, token: str = Depends(oauth2_s
 
 @app.get("/lessons", response_model=List[LessonResponse], status_code=200)
 async def lesson_get(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    """Retrieve lessons for a user."""
     try:
         return lessons.get_user_lessons(token, db)
     except ValueError as e:
@@ -132,6 +136,7 @@ async def lesson_update(
 @app.delete("/lessons/{lesson_id}", status_code=200)
 async def lesson_delete(lesson_id: str, token: str = Depends(oauth2_scheme),
                         db: Session = Depends(get_db)):
+    """Delete a lesson."""
     try:
         return lessons.delete_lesson(token, lesson_id, db)
     except PermissionError as e:

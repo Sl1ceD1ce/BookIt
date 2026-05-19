@@ -2,7 +2,7 @@
 
 import os
 from typing import Optional
-from sqlalchemy import create_engine, Column, String, Boolean, Integer
+from sqlalchemy import create_engine, String, Boolean, Integer
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Mapped, mapped_column
 
 DATABASE_URL = os.environ.get(
@@ -11,6 +11,7 @@ DATABASE_URL = os.environ.get(
 )
 
 engine = create_engine(DATABASE_URL)
+# pylint: disable=invalid-name
 SessionLocal = sessionmaker(bind=engine)
 
 
