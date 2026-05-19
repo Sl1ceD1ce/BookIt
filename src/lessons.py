@@ -1,21 +1,31 @@
-"""Functions that perform updates, create and delete for lessons"""
+"""
+Lesson management services for creating, booking,
+updating, retrieving, and deleting lessons.
+"""
 
 from datetime import datetime
-
-# pylint: disable=import-error
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import select, or_
+
+from database import Lesson
 import helpers
-import data_store as ds
-from schemas import LessonCreate, LessonUpdate
 
 
 # May extend in future to make sure time is in the future
 # But we can simply make the frontend such that it only shows possible times
-def create_lesson(token: str, lesson_data: LessonCreate) -> dict:
-    """Creates a lesson given that the user is a tutor"""
-    user_data = helpers.validate_and_get_user(token)
+def create_lesson(token: str, lesson_data, db: Session) -> dict:
+    """Create a new lesson for a tutor."""
+    if helpers.is_token_blacklisted(token, db):
+        raise ValueError("token is invalid")
 
-    if user_data["role"] != "tutor":
+    decoded_token = helpers.decode_jwt_token(token)
+    user = helpers.find_user_info(decoded_token, db)
+
+    if not user:
+        raise ValueError("user does not exist")
+
+    if user.role != "tutor":
         raise PermissionError("Only tutors can create lessons")
 
     if not helpers.is_valid_datetime(lesson_data.start_time):
@@ -24,176 +34,211 @@ def create_lesson(token: str, lesson_data: LessonCreate) -> dict:
     if not helpers.is_valid_datetime(lesson_data.end_time):
         raise ValueError("end time is in invalid format")
 
-    delta = datetime.fromisoformat(lesson_data.end_time) - datetime.fromisoformat(
-        lesson_data.start_time
-    )
-    duration = int(delta.total_seconds() / 60)
+    start = datetime.fromisoformat(lesson_data.start_time)
+    end = datetime.fromisoformat(lesson_data.end_time)
 
-    if datetime.fromisoformat(lesson_data.start_time) < datetime.now():
+    if start < datetime.now():
         raise HTTPException(status_code=400, detail="Lesson cannot start in the past")
+
+    duration = int((end - start).total_seconds() / 60)
 
     if duration <= 0:
         raise HTTPException(status_code=400, detail="Invalid lesson duration")
 
-    lesson_data_dict = {
-        "start_time": lesson_data.start_time,
-        "end_time": lesson_data.end_time,
-        "subject": lesson_data.subject,
-    }
-
     lesson_id = helpers.generate_id()
-    helpers.check_lesson_time(user_data, lesson_data_dict, lesson_id)
+    helpers.check_lesson_time(
+        user_data=user,
+        lesson_data={
+            "start_time": lesson_data.start_time,
+            "end_time": lesson_data.end_time
+        },
+        lesson_id=lesson_id,
+        db=db
+    )
 
-    lesson = {
+    lesson = Lesson(
+        id=lesson_id,
+        start_time=lesson_data.start_time,
+        end_time=lesson_data.end_time,
+        subject=lesson_data.subject,
+        duration=duration,
+        tutor_id=user.id,
+        assigned_student_id=None,
+        available=True
+    )
+
+    db.add(lesson)
+    db.commit()
+    db.refresh(lesson)
+
+    return {
         "lesson_id": lesson_id,
         "start_time": lesson_data.start_time,
         "end_time": lesson_data.end_time,
         "duration": duration,
         "subject": lesson_data.subject,
-        "tutor_id": user_data["id"],
+        "tutor_id": user.id,
         "assigned_student_id": None,
         "available": True,
     }
 
-    ds.get_data()["lessons"].append(lesson)
-    user_data["enrolled_lessons"].append(lesson)
-
-    return lesson
-
-
-def get_user_lessons(token: str) -> list:
-    """Gets an individual users corresponding lessons"""
-    if helpers.is_token_blacklisted(token):
+def get_user_lessons(token: str, db: Session) -> list:
+    """Retrieve all lessons associated with a user."""
+    if helpers.is_token_blacklisted(token, db):
         raise ValueError("token is invalid")
 
     decoded_token = helpers.decode_jwt_token(token)
-    user_data = helpers.find_user_info(decoded_token)
+    user = helpers.find_user_info(decoded_token, db)
 
-    if not user_data:
+    if not user :
         raise ValueError("user does not exist")
 
     user_id = decoded_token["user_id"]
 
     # Filter lessons where the user is tutor or student
-    lessons = []
-    for lesson in ds.get_data()["lessons"]:
-        if user_id in (lesson["tutor_id"], lesson["assigned_student_id"]):
-            lessons.append(
-                {
-                    "lesson_id": lesson["lesson_id"],
-                    "start_time": lesson["start_time"],
-                    "end_time": lesson["end_time"],
-                    "duration": lesson["duration"],
-                    "subject": lesson["subject"],
-                    "tutor_id": lesson["tutor_id"],
-                    "assigned_student_id": lesson.get("assigned_student_id"),
-                    "available": lesson["available"],
-                }
-            )
-
-    return lessons
-
-
-def book_lesson(token: str, lesson_id: str) -> dict:
-    """Books a student into the gievn lesson"""
-    user_data = helpers.validate_and_get_user(token)
-
-    if user_data["role"] != "student":
-        raise HTTPException(status_code=403, detail="Only students can book lessons")
-
-    lesson_data = helpers.find_lesson_info(lesson_id)
-
-    if not lesson_data:
-        raise HTTPException(status_code=404, detail="Lesson does not exist")
-
-    if lesson_data["available"] is False:
-        raise HTTPException(status_code=409, detail="Lesson is already booked")
-
-    lesson_data["assigned_student_id"] = user_data["id"]
-    lesson_data["available"] = False
-
-    if datetime.fromisoformat(str(lesson_data["start_time"])) < datetime.now():
-        raise HTTPException(
-            status_code=400, detail="Lesson in the past cannot be booked"
+    stmt = select(Lesson).where(
+        or_(
+            Lesson.tutor_id == user_id,
+            Lesson.assigned_student_id == user_id
         )
+    )
+    lessons = db.execute(stmt).scalars().all()
+    return [
+        {
+            "lesson_id": lesson.id,
+            "start_time": lesson.start_time,
+            "end_time": lesson.end_time,
+            "duration": lesson.duration,
+            "subject": lesson.subject,
+            "tutor_id": lesson.tutor_id,
+            "assigned_student_id": lesson.assigned_student_id,
+            "available": lesson.available,
+        }
+        for lesson in lessons
+    ]
 
-    return {
-        "lesson_id": lesson_data["lesson_id"],
-        "start_time": lesson_data["start_time"],
-        "end_time": lesson_data["end_time"],
-        "duration": lesson_data["duration"],
-        "subject": lesson_data["subject"],
-        "tutor_id": lesson_data["tutor_id"],
-        "assigned_student_id": lesson_data.get("assigned_student_id"),
-        "available": lesson_data["available"],
-    }
 
-
-def update_lesson(token: str, lesson_id: str, update_data: LessonUpdate) -> dict:
-    """Updates a lesson depending on if the given user is a student or tutor"""
-    if helpers.is_token_blacklisted(token):
+def book_lesson(token: str, lesson_id: str, db: Session) -> dict:
+    """Book an available lesson for a student."""
+    if helpers.is_token_blacklisted(token, db):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
     decoded_token = helpers.decode_jwt_token(token)
-    user_data = helpers.find_user_info(decoded_token)
-    lesson_data = helpers.find_lesson_info(lesson_id)
+    user = helpers.find_user_info(decoded_token, db)
 
-    if not user_data:
+    if not user:
         raise HTTPException(status_code=401, detail="User does not exist")
 
-    if not lesson_data:
+    if user.role != "student":
+        raise HTTPException(status_code=403, detail="Only students can book lessons")
+
+    lesson = helpers.find_lesson_info(lesson_id, db)
+
+    if not lesson:
         raise HTTPException(status_code=404, detail="Lesson does not exist")
 
-    if user_data["role"] == "student":
+    if not lesson.available:
+        raise HTTPException(status_code=409, detail="Lesson is already booked")
+
+    if datetime.fromisoformat(str(lesson.start_time)) < datetime.now():
+        raise HTTPException(status_code=400, detail="Lesson in the past cannot be booked")
+
+    lesson.assigned_student_id = user.id
+    lesson.available = False
+
+    db.commit()
+    db.refresh(lesson)
+
+    return {
+        "lesson_id": lesson.id,
+        "start_time": lesson.start_time,
+        "end_time": lesson.end_time,
+        "duration": lesson.duration,
+        "subject": lesson.subject,
+        "tutor_id": lesson.tutor_id,
+        "assigned_student_id": lesson.assigned_student_id,
+        "available": lesson.available,
+    }
+
+def update_lesson(token: str, lesson_id: str, update_data, db: Session) -> dict:
+    """Update lesson details or booking information."""
+    if helpers.is_token_blacklisted(token, db):
+        raise HTTPException(status_code=401, detail="Token is invalid")
+
+    decoded_token = helpers.decode_jwt_token(token)
+    user = helpers.find_user_info(decoded_token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="User does not exist")
+
+    lesson = helpers.find_lesson_info(lesson_id, db)
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson does not exist")
+
+    if user.role == "student":
         if update_data.start_time or update_data.end_time or update_data.subject:
             raise HTTPException(status_code=403, detail="Only tutors can modify this")
 
-        lesson_data["assigned_student_id"] = update_data.assigned_student_id
-        lesson_data["available"] = update_data.available
+        # After transferring lessons to be id based instead of email based
+        # Make it such that we validate that the student has this tutor as a tutor
 
-        return lesson_data
-
-    if user_data["role"] == "tutor":
+        lesson.assigned_student_id = update_data.assigned_student_id
+        lesson.available = update_data.available
+    elif user.role == "tutor":
 
         if update_data.start_time is not None:
-            lesson_data["start_time"] = update_data.start_time.isoformat()
+            lesson.start_time = update_data.start_time.isoformat()
         if update_data.end_time is not None:
-            lesson_data["end_time"] = update_data.end_time.isoformat()
+            lesson.end_time = update_data.end_time.isoformat()
         if update_data.subject is not None:
-            lesson_data["subject"] = update_data.subject
+            lesson.subject = update_data.subject
 
-        # Always update student_email and status (even if None)
-        lesson_data["assigned_student_id"] = update_data.assigned_student_id
-        lesson_data["available"] = update_data.available
+        lesson.assigned_student_id = update_data.assigned_student_id
+        lesson.available = update_data.available
 
-        helpers.check_lesson_time(user_data, lesson_data, lesson_id)
+        helpers.check_lesson_time(
+            user,
+            {"start_time": lesson.start_time, "end_time": lesson.end_time},
+            lesson_id,
+            db
+        )
+    else:
+        raise HTTPException(status_code=401, detail="User has invalid role")
 
-        return lesson_data
+    db.commit()
+    db.refresh(lesson)
 
-    raise HTTPException(status_code=401, detail="User has invalid role")
+    return {
+        "lesson_id": lesson.id,
+        "start_time": lesson.start_time,
+        "end_time": lesson.end_time,
+        "duration": lesson.duration,
+        "subject": lesson.subject,
+        "tutor_id": lesson.tutor_id,
+        "assigned_student_id": lesson.assigned_student_id,
+        "available": lesson.available,
+    }
 
-
-def delete_lesson(token: str, lesson_id: str) -> dict:
-    """Deletes a lesson from data"""
-    if helpers.is_token_blacklisted(token):
+def delete_lesson(token: str, lesson_id: str, db: Session) -> dict:
+    """Delete a lesson owned by a tutor."""
+    if helpers.is_token_blacklisted(token, db):
         raise HTTPException(status_code=401, detail="Token is invalid")
 
     decoded_token = helpers.decode_jwt_token(token)
-    user_data = helpers.find_user_info(decoded_token)
-    lesson_data = helpers.find_lesson_info(lesson_id)
-
-    if not user_data:
+    user = helpers.find_user_info(decoded_token, db)
+    if not user:
         raise HTTPException(status_code=401, detail="User does not exist")
 
-    if not lesson_data:
+    lesson = helpers.find_lesson_info(lesson_id, db)
+    if not lesson:
         raise HTTPException(status_code=404, detail="Lesson does not exist")
 
-    if user_data["role"] == "student":
+    if user.role == "student":
         raise HTTPException(status_code=403, detail="Only tutors can modify this")
 
-    if user_data["id"] != lesson_data["tutor_id"]:
+    if user.id != lesson.tutor_id:
         raise HTTPException(status_code=403, detail="User does not own lesson")
 
-    helpers.get_lessons().remove(lesson_data)
+    db.delete(lesson)
+    db.commit()
 
     return {"message": "lesson deleted successfully"}

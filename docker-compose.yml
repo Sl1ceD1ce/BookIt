@@ -1,14 +1,40 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker Compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
 services:
+  server:
+    build:
+      context: .
+    ports:
+      - 8000:8000
+    depends_on:
+      db:
+        condition: service_healthy
   db:
     image: postgres:16
-    environment:
-      POSTGRES_USER: bookit
-      POSTGRES_PASSWORD: bookit_pass
-      POSTGRES_DB: bookit_db
-    ports:
-      - "5432:5432"
+    restart: always
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=bookit_db
+      - POSTGRES_USER=bookit
+      - POSTGRES_PASSWORD=bookit_pass
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bookit", "-d", "bookit_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  pgdata:
+  db-data:
+secrets:
+  db-password:
+    file: db/password.txt

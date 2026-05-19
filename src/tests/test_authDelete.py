@@ -1,24 +1,4 @@
-import os
-import pytest
-import data_store as ds
-from server import app
-from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
-
-client = TestClient(app)
-
-TEST_DB = "data.json"
-
-
-@pytest.fixture
-def reset_data():
-    """Reset datastore before each test"""
-    ds.data = {"users": [], "lessons": [], "invalidated_tokens": []}
-    yield
-    # Cleanup
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
-
 
 sampleTutor1 = {
     "first_name": "John",
@@ -62,7 +42,7 @@ newStart = startTime + timedelta(days=1)
 newEnd = newStart + timedelta(minutes=60)
 
 class TestAuthDelete:
-    def test_successfulDeleteTutor(self, reset_data):
+    def test_successfulDeleteTutor(self, client):
         register = client.post("/users/register", json=sampleTutor1)
 
         data = register.json()
@@ -94,7 +74,7 @@ class TestAuthDelete:
         )
         assert getResTutor2.status_code == 200
 
-    def test_successfulDeleteStudent(self, reset_data):
+    def test_successfulDeleteStudent(self, client):
         register = client.post("/users/register", json=sampleStudent1)
 
         data = register.json()
@@ -125,18 +105,18 @@ class TestAuthDelete:
         )
         assert getRes.status_code == 200
 
-    def test_deleteWithInvalidToken(self, reset_data):
+    def test_deleteWithInvalidToken(self, client):
         deleteRes = client.delete(
             "/users",
             headers={"Authorization": "Bearer invalid_token"},
         )
         assert deleteRes.status_code == 401
 
-    def test_deleteWithoutToken(self, reset_data):
+    def test_deleteWithoutToken(self, client):
         deleteRes = client.delete("/users")
         assert deleteRes.status_code == 401
 
-    def test_deleteNonexistentUser(self, reset_data):
+    def test_deleteNonexistentUser(self, client):
         # Create a user and get token
         register = client.post("/users/register", json=sampleTutor1)
         data = register.json()
