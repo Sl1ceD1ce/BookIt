@@ -4,6 +4,7 @@ BookIt is a full stack booking and scheduling platform designed to simplify reso
 
 The platform allows users to create accounts, manage bookings, schedule resources, and interact with a secure REST API. The project was built using a scalable backend architecture with containerised services and automated testing workflows.
 
+This is the backend repository for BookIt.
 ---
 
 # Features
